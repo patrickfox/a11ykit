@@ -1,0 +1,34 @@
+{
+  "name": "a11y_essentials",
+  "version": "0.0.1",
+  "authors": [
+    "Patrick Fox <patrickfox@gmail.com>"
+  ],
+  "description": "A set of jQuery methods that empower modern accessibility.",
+  "main": "dist/jquery.a11y_essentials.js",
+  "moduleType": [
+    "amd"
+  ],
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "announce",
+    "access",
+    "focus management",
+    "live",
+    "regions",
+    "aria-live"
+  ],
+  "license": "MIT",
+  "homepage": "TBD",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~1.10"
+  }
+}
