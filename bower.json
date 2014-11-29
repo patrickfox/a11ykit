@@ -1,8 +1,8 @@
 {
-  "name": "a11y_essentials",
+  "name": "modern_a11y",
   "version": "0.0.0",
   "authors": [
-    "Patrick Fox <patrickfox@gmail.com>"
+    "Patrick Fox"
   ],
   "description": "A set of jQuery methods that empower modern accessibility.",
   "main": "dist/modern_a11y.js",
