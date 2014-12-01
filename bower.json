@@ -1,11 +1,11 @@
 {
-  "name": "modern_a11y",
+  "name": "a11y_kit",
   "version": "0.0.0",
   "authors": [
     "Patrick Fox"
   ],
   "description": "A set of jQuery methods that empower modern accessibility.",
-  "main": "dist/modern_a11y.js",
+  "main": "dist/a11y_kit.js",
   "moduleType": [
     "amd"
   ],
