@@ -5,7 +5,9 @@ This library adds common jQuery methods that are useful is creating modern acces
 
 ## Access - Focus on anything
 ###Usage
+```
 $(selector).access(place\_focus\_before)
+```
 
 ### Params
 This method enables .focus() to be fired on elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to temporarily receive focus. Once the element is blurred, everything is cleaned up and returned to its original state.
@@ -36,17 +38,19 @@ This method enables .focus() to be fired on elements that do not natively suppor
 
 ## Announce - Say anything
 
-###Usage:
+###Usage
+```
 $.announce(message, manner)
+```
 
 ### _Note:_ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that is stays in the page at all times.
 
-### Example: 
+### Example
 ```
 <div id="a11y_announcer" aria-live="polite"></div>
 ```
 
-### Params:
+### Params
 - @message: copy/message to be announced
 - @manner: ['polite'(default), 'assertive'] manner is which message is announced
 
@@ -60,7 +64,13 @@ Announce content via a dedicated, global aria-live announcement container. annou
 		return @
 
 
-## :focusable and :tabbable pseudo selectors from jQuery
+## Utility pseudo-selectors for jQuery
+
+###Usage
+```
+$(':focusable') # -> returns all focusable elements
+
+$(':tabbable') # -> returns all tabbable elements
 
 	$.extend $.expr[':'],
 		data: (if $.expr.createPseudo then $.expr.createPseudo((dataName) ->
