@@ -30,7 +30,7 @@ $.announce(message, manner)
 ```
 
 ### Params
--``` @message: string ``` copy/message to be announced
+- ``` @message: string``` copy/message to be announced
 - ```@manner: ['polite'(default), 'assertive']``` manner is which message is announced
 
 
