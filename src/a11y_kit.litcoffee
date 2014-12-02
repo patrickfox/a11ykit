@@ -42,7 +42,9 @@ $.announce(message, manner)
 ### _Note:_ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that is stays in the page at all times.
 
 ### Example: 
+```
 <div id="a11y_announcer" aria-live="polite"></div>
+```
 
 ### Params:
 - @message: copy/message to be announced
