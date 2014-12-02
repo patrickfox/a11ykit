@@ -6,7 +6,7 @@ This library adds common jQuery methods that are useful is creating modern acces
 ## Access - Focus on anything
 ###Usage
 ```
-$(selector).access(place\_focus\_before)
+$(selector).access(place_focus_before)
 ```
 
 ### Params
