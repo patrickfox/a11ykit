@@ -22,7 +22,7 @@ This method enables .focus() to be fired on elements that do not natively suppor
 $.announce(message, manner)
 ```
 
-### _Note:_ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that is stays in the page at all times.
+__Note:__ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that is stays in the page at all times.
 
 ### Example
 ```
