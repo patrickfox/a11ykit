@@ -1,6 +1,6 @@
 # A11y Kit
-###Essential tools to empower modern accessibility
-This library adds common jQuery methods that are useful is creating modern accessible web applications.
+###Essential JS tools that empower modern accessibility
+This library provides common jQuery methods that are useful in managing user focus, speaking content and selecting interactive elements.
 
 
 ## Access - Focus on anything
