@@ -10,10 +10,13 @@ $(selector).access(place_focus_before)
 ```
 
 ### Params
-- ```@place_focus_before: boolean```  if true, focus is placed on a temporary span tag inserted before the specified element
+- ```@place_focus_before: boolean(default: false)```  if true, focus is placed on a temporary span tag inserted before the specified element. By default, focus is placed on the specified element itself.
 
 ###How It Works
-This method enables .focus() to be fired on elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to temporarily receive focus. Once the element is blurred, everything is cleaned up and returned to its original state.
+This method allows focus of elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to temporarily receive focus. Once the element is blurred, everything is cleaned up and returned to its original state.
+
+###Behavior
+When focus is placed on a container, screen readers may either 1) read the contents of the container or 2) read any associated label(e.g. aria-label, aria-labelledby) on the element.
 
 ## Announce - Say anything
 
