@@ -1,12 +1,19 @@
-# Accessibility Essentials
-This library adds common jQuery methods that are useful is creating modern accessibile web applications.
+# A11y Kit
+###Essential tools to empower modern accessibility
+This library adds common jQuery methods that are useful is creating modern accessible web applications.
 
 
-## Focus on anything with $(el).access(place_focus_before)
-_Usage:_ $(selector).access(place\_focus\_before)
+## Access - Focus on anything
+###Usage
+```
+$(selector).access(place_focus_before)
+```
 
 ### Params
-This method enables .focus() to be fired on elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to receive focus.
+@place_focus_before: boolean, if true, focus is placed on a temporary span tag inserted before the specified element
+
+###How It Works
+This method enables .focus() to be fired on elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to temporarily receive focus. Once the element is blurred, everything is cleaned up and returned to its original state.
 
 	$.fn.access = (place_focus_before) ->
 		if place_focus_before
@@ -32,17 +39,21 @@ This method enables .focus() to be fired on elements that do not natively suppor
 		return @
 
 
-## Say anything with $.announce(message, manner)
+## Announce - Say anything
 
-###Usage:
+###Usage
+```
 $.announce(message, manner)
+```
 
 ### _Note:_ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that is stays in the page at all times.
 
-### Example: 
-'''<div id="a11y_announcer" aria-live="polite"></div>'''
+### Example
+```
+<div id="a11y_announcer" aria-live="polite"></div>
+```
 
-### Params:
+### Params
 - @message: copy/message to be announced
 - @manner: ['polite'(default), 'assertive'] manner is which message is announced
 
@@ -56,7 +67,13 @@ Announce content via a dedicated, global aria-live announcement container. annou
 		return @
 
 
-## :focusable and :tabbable pseudo selectors from jQuery
+## Utility pseudo-selectors for jQuery
+
+###Usage
+```
+$(':focusable') # -> returns all focusable elements
+
+$(':tabbable') # -> returns all tabbable elements
 
 	$.extend $.expr[':'],
 		data: (if $.expr.createPseudo then $.expr.createPseudo((dataName) ->
