@@ -2,6 +2,20 @@
 ###Essential JS tools that empower modern accessibility
 This library provides common jQuery methods that are useful in managing user focus, speaking content and selecting interactive elements.
 
+## Installation
+
+### Bower Package
+
+```
+bower install a11y_kit
+```
+
+In your page, link to the file at:
+
+```
+bower_components/dist/a11y_kit.jquery.js
+```
+
 
 ## Access - Focus on anything
 ###Usage
