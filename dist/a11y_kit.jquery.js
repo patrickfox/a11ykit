@@ -35,9 +35,8 @@
     clear_announcer = function() {
       announcer.html('');
       announce_timeout = null;
-      return announcer;
     };
-    clear_announcer.attr('aria-live', manner);
+    announcer.attr('aria-live', manner);
     announcer.html(message);
     clearTimeout(announce_timeout);
     announce_timeout = setTimeout(clear_announcer, 500);

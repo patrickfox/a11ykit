@@ -66,8 +66,8 @@ Announce content via a dedicated, global aria-live announcement container. annou
 		clear_announcer = ->
 			announcer.html('')
 			announce_timeout = null
-			return announcer
-		clear_announcer.attr('aria-live', manner)
+			return
+		announcer.attr('aria-live', manner)
 		announcer.html(message)
 		clearTimeout announce_timeout
 		announce_timeout = setTimeout(clear_announcer, 500)
