@@ -25,7 +25,7 @@ When focus is placed on a container, screen readers may either 1) read the conte
 $.announce(message, manner)
 ```
 
-__Note:__ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that stays in the page at all times.
+__Note:__ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that stays in the page at all times. _This element cannot be created dynamically and must be in the page on page load._
 
 ### Example
 ```
