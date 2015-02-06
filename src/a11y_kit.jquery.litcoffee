@@ -76,6 +76,22 @@ Announce content via a dedicated, global aria-live announcement container. annou
 
 ## Utility pseudo-selectors for jQuery
 
+	visible = (element) ->
+		$.expr.filters.visible(element) and !$(element).parents().addBack().filter(->
+			$.css(this, 'visibility') == 'hidden'
+		).length
+
+	focusable = (element, isTabIndexNotNaN) ->
+		nodeName = element.nodeName.toLowerCase()
+		if 'area' == nodeName
+			map = element.parentNode
+			mapName = map.name
+			if !element.href or !mapName or map.nodeName.toLowerCase() != 'map'
+				return false
+			img = $('img[usemap=#' + mapName + ']')[0]
+			return !!img and visible(img)
+		(if /input|select|textarea|button|object/.test(nodeName) then !element.disabled else if 'a' == nodeName then element.href or isTabIndexNotNaN else isTabIndexNotNaN) and visible(element)
+
 ###Usage
 ```
 $(':focusable') # -> returns all focusable elements
