@@ -1,5 +1,5 @@
 # A11y Kit
-###Essential JS tools that empower modern accessibility
+### Essential JS tools that empower modern accessibility
 This library provides common jQuery methods that are useful in managing user focus, speaking content and selecting interactive elements.
 
 ## Installation
@@ -18,7 +18,7 @@ bower_components/dist/a11y_kit.jquery.js
 
 
 ## Access - Focus on anything
-###Usage
+### Usage
 ```
 $(selector).access(place_focus_before)
 ```
@@ -26,7 +26,7 @@ $(selector).access(place_focus_before)
 ### Params
 - ```@place_focus_before: boolean(default: false)```  if true, focus is placed on a temporary span tag inserted before the specified element. By default, focus is placed on the specified element itself.
 
-###Why use $.access()?
+### Why use $.access()?
 Managing focus on web pages can be complex, and requires the use of tabindex. The tabindex attribute allows any element to receive focus, but hard coding tabindex into your pages makes your project more brittle and error-prone. _One example:_ using tabindex="0" on a container makes all child interactive elements read the container's entire contents(in VoiceOver). 
 
 A far more elegant solution is to place focus on an element dynamically using a script like $.access().
