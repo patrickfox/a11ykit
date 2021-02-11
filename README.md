@@ -1,6 +1,11 @@
-# A11y Kit
+# A11yKit
 ### Essential JS tools that empower modern accessibility
-This library provides common jQuery methods that are useful in managing user focus, speaking content and selecting interactive elements.
+This library provides JavaScript methods that are useful in managing user focus, announcing content and selecting interactive elements.
+
+A11yKit features:
+- [`access()`](#access) - focus on anything in the DOM without using `tabindex`
+
+
 
 ## Installation
 
@@ -16,7 +21,7 @@ In your page, link to the file at:
 bower_components/dist/a11y_kit.jquery.js
 ```
 
-
+<a id="access"></a>
 ## Access - Focus on anything
 ### Usage
 ```
@@ -36,12 +41,12 @@ __General rule:__ don't hard code tabindex - instead, use $.access() to manage f
 ###How It Works
 This method allows focus of elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to temporarily receive focus. Once the element is blurred, everything is cleaned up and returned to its original state.
 
-###Behavior
+### Behavior
 When focus is placed on a container, screen readers may either 1) read the contents of the container or 2) read any associated label(e.g. aria-label, aria-labelledby) on the element.
 
 ## Announce - Say anything
 
-###Usage
+### Usage
 ```
 $.announce(message, manner)
 ```
@@ -61,7 +66,7 @@ __Note:__ Requires a dedicated #a11y_announcer container with a hard-coded aria-
 Announce content via a dedicated, global aria-live announcement container. announce() works by simply updating the content of the #a11y_container with the content to be spoken. It also performs a reset of sorts by toggling the @aria-live value to 'off', clearing the contents, and lastly resetting the @aria-live value to its original value. This allows for repeated messages to be spoken, if needed.
 
 
-###Why use $.announce()?
+### Why use $.announce()?
 The promise of live regions and aria-live is to improve understanding and perception of dynamic content. In reality, though, overuse of live regions can create a lot more problems than it solves. Too many live regions on a page makes it more difficult to debug related issues. 
 
 At any given time, only one live region can speak its content, so there's never a need to have more than one in the page. Using a single, common live region and the $.announce() script greatly simplifies your code and debugging efforts.
@@ -71,7 +76,7 @@ __General Rule:__ Do not use _aria-live_ or any live region role( _role=alert|lo
 ## Utility pseudo-selectors for jQuery
 Select all :focusable and :tabbable elements. Credit: jQuery UI
 
-###Usage
+### Usage
 ```
 $(':focusable') # -> returns all focusable elements
 
