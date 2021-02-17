@@ -1,15 +1,6 @@
 # A11yKit
-<h1 aria-label="accessibility kit" style="font-size:30px;">
- ________    _____    _____      ___    ___ ___  __    ___  _________   
-|\   __  \  / __  \  / __  \    |\  \  /  /|\  \|\  \ |\  \|\___   ___\ 
-\ \  \|\  \|\/_|\  \|\/_|\  \   \ \  \/  / | \  \/  /|\ \  \|___ \  \_| 
- \ \   __  \|/ \ \  \|/ \ \  \   \ \    / / \ \   ___  \ \  \   \ \  \  
-  \ \  \ \  \   \ \  \   \ \  \   \/  /  /   \ \  \\ \  \ \  \   \ \  \ 
-   \ \__\ \__\   \ \__\   \ \__\__/  / /      \ \__\\ \__\ \__\   \ \__\
-    \|__|\|__|    \|__|    \|__|\___/ /        \|__| \|__|\|__|    \|__|
-</h1>
 
-### Essential JS tools that empower modern accessibility
+## Essential JS tools that empower modern accessibility
 This library provides JavaScript methods that are useful in managing user focus, announcing content and selecting interactive elements.
 
 A11yKit features:
