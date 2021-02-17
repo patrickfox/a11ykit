@@ -1,5 +1,5 @@
 # A11yKit
-<h1 aria-label="accessibility kit">
+<h1 aria-label="accessibility kit" style="font-size:30px;">
 <pre>
  ________    _____    _____      ___    ___ ___  __    ___  _________   
 |\   __  \  / __  \  / __  \    |\  \  /  /|\  \|\  \ |\  \|\___   ___\ 
