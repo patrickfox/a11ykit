@@ -61,7 +61,7 @@ __Note:__ Requires a dedicated #a11y_announcer container with a hard-coded aria-
 
 ### Params
 - ``` @message: string``` copy/message to be announced
-- ```@manner: ['polite'(default), 'assertive']``` manner is which message is announced
+- ``` @manner: ['polite'(default), 'assertive']``` manner is which message is announced
 
 
 Announce content via a dedicated, global aria-live announcement container. announce() works by simply updating the content of the #a11y_container with the content to be spoken. It also performs a reset of sorts by toggling the @aria-live value to 'off', clearing the contents, and lastly resetting the @aria-live value to its original value. This allows for repeated messages to be spoken, if needed.

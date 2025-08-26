@@ -1,3 +1,4 @@
+
 const access = function(el, place_focus_before) {
   temp_el;
   let focus_el = undefined;
@@ -44,4 +45,4 @@ const access = function(el, place_focus_before) {
   }
 };
 
-ns.access = access;
+export {access};

@@ -1,6 +1,6 @@
-announce_timeout = null;
-let announcer = undefined;
 const announce = function(message, manners) {
+  let announce_timeout = null;
+	let announcer = document.getElementById('announce-this');
   const clear_announcer = function() {
     announcer.innerHTML = '';
     announce_timeout = null;
@@ -9,9 +9,10 @@ const announce = function(message, manners) {
   manners = manners || 'polite';
   if (!announcer) {
     announcer = document.createElement('div');
+    announcer.id = 'announce-this';
+    document.body.appendChild(announcer);
   }
   announcer.setAttribute('aria-live', 'off');
-
   clear_announcer().setAttribute('aria-live', manners);
   announcer.innerHTML = message;
   clearTimeout(announce_timeout);
@@ -19,4 +20,4 @@ const announce = function(message, manners) {
   return announcer;
 };
 
-ns.announce = announce;
+export {announce};

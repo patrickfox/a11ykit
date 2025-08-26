@@ -5,7 +5,7 @@
     "Patrick Fox"
   ],
   "description": "A set of utilities that empower modern accessibility.",
-  "main": "dist/a11yfox.js",
+  "main": "dist/a11y_kit.js",
   "moduleType": [
     "amd"
   ],
