@@ -2,13 +2,55 @@
   "name": "a11ykit",
   "version": "1.0.0",
   "description": "A set of utilities that empower modern accessibility.",
-  "main": "a11ykit.js",
+  "main": "dist/a11ykit.umd.js",
+  "module": "dist/a11ykit.esm.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run test && rollup -c",
+    "build:watch": "rollup -c -w",
+    "build:only": "rollup -c",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --coverage --watchAll=false",
+    "prepublishOnly": "npm run test:ci && npm run build:only"
   },
-  "author": {
-    "name": "Patrick Fox",
-    "email": "accessibilityfox@gmail.com"
+  "author": "Patrick Fox <accessibilityfox@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patrickfox/a11ykit.git"
   },
-  "license": "MIT"
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "frontend",
+    "typescript",
+    "focus",
+    "aria",
+    "screen-reader"
+  ],
+  "bugs": {
+    "url": "https://github.com/patrickfox/a11ykit/issues"
+  },
+  "homepage": "https://github.com/patrickfox/a11ykit#readme",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.0",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "jsdom": "^26.1.0",
+    "rollup": "^2.79.2",
+    "ts-jest": "^29.4.1",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.2"
+  }
 }

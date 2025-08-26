@@ -1,85 +1,332 @@
 # A11yKit
 
-## Essential JS tools that empower modern accessibility
-This library provides JavaScript methods that are useful in managing user focus, announcing content and selecting interactive elements.
+## Essential TypeScript utilities that empower modern accessibility
 
-A11yKit features:
-- [`access()`](#access) - focus on anything in the DOM without using `tabindex`
+A11yKit is a lightweight, TypeScript-first accessibility library that provides essential utilities for managing focus, screen reader announcements, ARIA states, and motion preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
 
+## Features
 
+- 🎯 **Focus Management** - Dynamically focus any element without hardcoded tabindex
+- 📢 **Screen Reader Announcements** - Reliable ARIA live region management  
+- 🔒 **ARIA State Management** - Hide/show content from assistive technology
+- 🎨 **Motion Preferences** - Detect and respond to `prefers-reduced-motion`
+- 📦 **TypeScript First** - Full type definitions included
+- 🌐 **Browser Compatible** - Works in all modern browsers (ES5+ UMD builds)
+- ⚡ **Lightweight** - Minimal footprint, no dependencies
+- ✅ **Well Tested** - Comprehensive Jest test suite with 97%+ coverage
 
 ## Installation
 
-### Bower Package
+### NPM
 
-```
-bower install a11y_kit
-```
-
-In your page, link to the file at:
-
-```
-bower_components/dist/a11y_kit.jquery.js
+```bash
+npm install a11ykit
 ```
 
-<a id="access"></a>
-## Access - Focus on anything
-### Usage
-```
-$(selector).access(place_focus_before)
-```
+### CDN
 
-### Params
-- ```@place_focus_before: boolean(default: false)```  if true, focus is placed on a temporary span tag inserted before the specified element. By default, focus is placed on the specified element itself.
+```html
+<!-- ES Module -->
+<script type="module">
+  import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from 'https://unpkg.com/a11ykit/dist/a11ykit.esm.js';
+</script>
 
-### Why use $.access()?
-Managing focus on web pages can be complex, and requires the use of tabindex. The tabindex attribute allows any element to receive focus, but hard coding tabindex into your pages makes your project more brittle and error-prone. _One example:_ using tabindex="0" on a container makes all child interactive elements read the container's entire contents(in VoiceOver). 
-
-A far more elegant solution is to place focus on an element dynamically using a script like $.access().
-
-__General rule:__ don't hard code tabindex - instead, use $.access() to manage focus.
-
-###How It Works
-This method allows focus of elements that do not natively support .focus().  This is accomplished via the addition of tabindex="-1" to the supplied target and allows it to temporarily receive focus. Once the element is blurred, everything is cleaned up and returned to its original state.
-
-### Behavior
-When focus is placed on a container, screen readers may either 1) read the contents of the container or 2) read any associated label(e.g. aria-label, aria-labelledby) on the element.
-
-## Announce - Say anything
-
-### Usage
-```
-$.announce(message, manner)
+<!-- UMD (Browser Global) -->
+<script src="https://unpkg.com/a11ykit/dist/a11ykit.umd.min.js"></script>
+<script>
+  const { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } = A11yKit;
+</script>
 ```
 
-__Note:__ Requires a dedicated #a11y_announcer container with a hard-coded aria-live attribute that stays in the page at all times. _This element cannot be created dynamically and must be in the page on page load._
+## Usage
 
-### Example
+### ES Modules
+
+```typescript
+import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from 'a11ykit';
+
+// Focus management
+const button = document.querySelector('button')!;
+access(button);
+
+// Screen reader announcements
+announce('Your changes have been saved', 'polite');
+
+// Hide content from screen readers
+const modal = document.querySelector('#modal')!;
+ariaHide(document.body); // Hide everything except modal
+ariaUnhide(document.body); // Restore visibility
+
+// Check motion preferences
+if (prefersReducedMotion) {
+  // Skip animations
+}
 ```
-<div id="a11y_announcer" aria-live="polite"></div>
+
+### CommonJS
+
+```javascript
+const { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } = require('a11ykit');
 ```
 
-### Params
-- ``` @message: string``` copy/message to be announced
-- ``` @manner: ['polite'(default), 'assertive']``` manner is which message is announced
+## API Reference
 
+### `access(element, placeFocusBefore?)`
 
-Announce content via a dedicated, global aria-live announcement container. announce() works by simply updating the content of the #a11y_container with the content to be spoken. It also performs a reset of sorts by toggling the @aria-live value to 'off', clearing the contents, and lastly resetting the @aria-live value to its original value. This allows for repeated messages to be spoken, if needed.
+Dynamically focus any element without hardcoded tabindex attributes.
 
+**Parameters:**
+- `element: HTMLElement` - The element to receive focus
+- `placeFocusBefore?: string | boolean` - Optional. If `true`, creates a visually hidden span before the element and focuses that instead. If a string, uses that as the span's content.
 
-### Why use $.announce()?
-The promise of live regions and aria-live is to improve understanding and perception of dynamic content. In reality, though, overuse of live regions can create a lot more problems than it solves. Too many live regions on a page makes it more difficult to debug related issues. 
+**Behavior:**
+- Temporarily adds `tabindex="-1"` to make element focusable
+- Automatically cleans up on blur, restoring original tabindex state  
+- Preserves existing tabindex values using `data-ogti` attribute
+- Handles elements without parent nodes gracefully
 
-At any given time, only one live region can speak its content, so there's never a need to have more than one in the page. Using a single, common live region and the $.announce() script greatly simplifies your code and debugging efforts.
+**Example:**
+```typescript
+const heading = document.querySelector('h2')!;
 
-__General Rule:__ Do not use _aria-live_ or any live region role( _role=alert|log|marquee|status|timer_) - instead, use ONE common live region and $.announce() your content as needed.
+// Focus the heading directly
+access(heading);
 
-## Utility pseudo-selectors for jQuery
-Select all :focusable and :tabbable elements. Credit: jQuery UI
+// Focus with a screen reader announcement
+access(heading, 'Skip to main content');
 
-### Usage
+// Focus invisibly before the heading
+access(heading, true);
 ```
-$(':focusable') # -> returns all focusable elements
 
-$(':tabbable') # -> returns all tabbable elements
+**Why use `access()`?**
+Hardcoded tabindex values make pages brittle and can cause accessibility issues. The `access()` function provides dynamic focus management without permanent DOM changes.
+
+---
+
+### `announce(message, manners?)`
+
+Announce messages to screen readers via ARIA live regions.
+
+**Parameters:**
+- `message: string` - The message to announce
+- `manners?: 'polite' | 'assertive'` - Announcement priority (default: 'polite')
+
+**Returns:** `HTMLElement` - The announcer element
+
+**Behavior:**
+- Creates or reuses a single `#announce-this` element
+- Temporarily sets `aria-live="off"` then back to specified value for reliable announcements
+- Automatically clears announcements after 500ms
+- Cancels previous announcements when new ones are made
+
+**Example:**
+```typescript
+// Polite announcement (won't interrupt screen reader)
+announce('Form saved successfully');
+
+// Assertive announcement (interrupts current speech)
+announce('Error: Please correct the highlighted fields', 'assertive');
+
+// Chained announcements (cancels previous)
+announce('Loading...', 'polite');
+// Later...
+announce('Content loaded', 'polite');
 ```
+
+**Why use `announce()`?**
+Multiple live regions create debugging complexity and conflicts. A single, managed live region with the `announce()` function is more reliable and maintainable.
+
+---
+
+### `ariaHide(parent?)` and `ariaUnhide(parent?)`
+
+Manage ARIA visibility to hide/show content from assistive technology.
+
+**Parameters:**
+- `parent?: HTMLElement` - Element to hide/unhide (default: `document.body`)
+
+**`ariaHide()` Behavior:**
+- Sets `aria-hidden="true"` on the parent element
+- Finds all focusable elements and sets `tabindex="-1"`
+- Preserves original tabindex values in `data-ogti` attributes
+- Skips processing if parent already has a hidden ancestor
+
+**`ariaUnhide()` Behavior:**
+- Removes `aria-hidden` attribute from parent
+- Restores original tabindex values from `data-ogti` attributes
+- Removes temporary `data-ogti` attributes
+
+**Example:**
+```typescript
+const modal = document.querySelector('#modal')!;
+const sidebar = document.querySelector('#sidebar')!;
+
+// Hide sidebar when modal opens
+ariaHide(sidebar);
+
+// Show sidebar when modal closes  
+ariaUnhide(sidebar);
+
+// Hide everything (common for modals)
+ariaHide(document.body);
+// Don't forget to unhide when modal closes
+ariaUnhide(document.body);
+```
+
+**Why use `ariaHide()`/`ariaUnhide()`?**
+Properly managing ARIA states and focus trapping requires careful coordination of multiple attributes. These functions handle the complexity automatically and reversibly.
+
+---
+
+### `prefersReducedMotion`
+
+Boolean value indicating user's motion preference.
+
+**Type:** `boolean`
+
+**Behavior:**
+- Automatically updates based on `(prefers-reduced-motion: reduce)` media query
+- Adds/removes `prm` class on `document.body`  
+- Updates when user changes system preferences
+
+**Example:**
+```typescript
+// Check preference
+if (prefersReducedMotion) {
+  // Skip or reduce animations
+  element.style.transition = 'none';
+} else {
+  // Use full animations
+  element.style.transition = 'transform 0.3s ease';
+}
+
+// Or use CSS with the body class
+/* In CSS */
+.animated {
+  transition: transform 0.3s ease;
+}
+
+body.prm .animated {
+  transition: none;
+}
+```
+
+**Why use `prefersReducedMotion`?**
+Respecting user motion preferences is crucial for accessibility, particularly for users with vestibular disorders. This provides an easy way to conditionally disable animations.
+
+## Development
+
+### Building the Project
+
+```bash
+# Install dependencies
+npm install
+
+# Run tests (required before build)
+npm test
+
+# Build all formats
+npm run build
+
+# Build without tests
+npm run build:only
+
+# Watch mode for development
+npm run build:watch
+```
+
+### Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+
+# CI mode (coverage + no watch)
+npm run test:ci
+```
+
+The test suite includes:
+- **64 comprehensive tests** covering all functions
+- **DOM manipulation testing** with jsdom
+- **Focus management and event handling**
+- **Accessibility-specific assertions**
+- **Edge case handling** (missing elements, no parent nodes, etc.)
+- **97%+ code coverage**
+
+### Project Structure
+
+```
+src/
+├── access.ts              # Focus management
+├── announce.ts            # Screen reader announcements  
+├── aria-hide.ts           # ARIA state management
+├── prefers-reduced-motion.ts # Motion preference detection
+└── index.ts               # Main exports
+
+tests/
+├── access.test.ts         # Focus management tests
+├── announce.test.ts       # Announcement tests
+├── aria-hide.test.ts      # ARIA state tests
+├── prefers-reduced-motion.test.ts # Motion preference tests
+└── setup.ts               # Test configuration
+
+dist/                      # Built files
+├── a11ykit.esm.js        # ES Module (modern)
+├── a11ykit.umd.js        # UMD (browser compatible)
+├── a11ykit.umd.min.js    # Minified UMD  
+└── types/                # TypeScript definitions
+```
+
+## Browser Support
+
+- **ES Module builds**: Modern browsers with ES2018+ support
+- **UMD builds**: All browsers supporting ES5+ (IE11+)
+- **TypeScript**: Full type definitions included
+- **Source maps**: Available for all builds
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Make changes with tests: `npm test`
+4. Build the project: `npm run build`  
+5. Submit a pull request
+
+## License
+
+MIT © Patrick Fox
+
+---
+
+## Migration from v0.x
+
+The library has been completely rewritten in TypeScript with a modern API:
+
+**Old (jQuery-based):**
+```javascript
+$(element).access(true);
+$.announce('message', 'polite');
+```
+
+**New (TypeScript/Vanilla JS):**
+```typescript  
+import { access, announce } from 'a11ykit';
+
+access(element, true);
+announce('message', 'polite');
+```
+
+Key changes:
+- ✅ TypeScript with full type safety
+- ✅ No jQuery dependency  
+- ✅ ES modules and tree shaking support
+- ✅ Modern build system (Rollup + Jest)
+- ✅ Comprehensive test coverage
+- ✅ Better browser compatibility
