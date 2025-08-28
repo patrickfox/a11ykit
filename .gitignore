@@ -1,3 +1,29 @@
-bower_components
+# Dependencies
 node_modules
+
+# Build output
+dist/
+
+# Test coverage
+coverage/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
