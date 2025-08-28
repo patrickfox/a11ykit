@@ -1,112 +1,77 @@
 # A11yKit
 
-## Essential TypeScript utilities that empower modern accessibility
+## Essential JavaScript utilities that empower modern accessibility
 
-A11yKit is a lightweight, TypeScript-first accessibility library that provides essential utilities for managing focus, screen reader announcements, ARIA states, and motion preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
+A11yKit is a lightweight, JS accessibility (a11y) library that provides essential utilities for managing focus,  announcing screen reader (SR) messages, hiding content from SR's, and managing motion preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
 
 ## Features
 
-- 🎯 **Focus Management** - Dynamically focus any element without hardcoded tabindex
-- 📢 **Screen Reader Announcements** - Reliable ARIA live region management  
-- 🔒 **ARIA State Management** - Hide/show content from assistive technology
+- 🎯 **Focus Management** - Dynamically place focus on any element without hardcoded tabindex
+- 📢 **Screen Reader Announcements** - Announce messages to improve understanding for SR users
+- 🔒 **ARIA State Management** - Hide/show content from screen readers
 - 🎨 **Motion Preferences** - Detect and respond to `prefers-reduced-motion`
-- 📦 **TypeScript First** - Full type definitions included
-- 🌐 **Browser Compatible** - Works in all modern browsers (ES5+ UMD builds)
 - ⚡ **Lightweight** - Minimal footprint, no dependencies
 - ✅ **Well Tested** - Comprehensive Jest test suite with 97%+ coverage
 
-## Installation
-
-### NPM
+## Getting Started
 
 ```bash
-npm install a11ykit
+npm install @a11yfox/a11ykit
 ```
 
-### CDN
-
-```html
-<!-- ES Module -->
-<script type="module">
-  import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from 'https://unpkg.com/a11ykit/dist/a11ykit.esm.js';
-</script>
-
-<!-- UMD (Browser Global) -->
-<script src="https://unpkg.com/a11ykit/dist/a11ykit.umd.min.js"></script>
-<script>
-  const { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } = A11yKit;
-</script>
-```
-
-## Usage
-
-### ES Modules
-
-```typescript
+```js
 import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from 'a11ykit';
-
-// Focus management
-const button = document.querySelector('button')!;
-access(button);
-
-// Screen reader announcements
-announce('Your changes have been saved', 'polite');
-
-// Hide content from screen readers
-const modal = document.querySelector('#modal')!;
-ariaHide(document.body); // Hide everything except modal
-ariaUnhide(document.body); // Restore visibility
-
-// Check motion preferences
-if (prefersReducedMotion) {
-  // Skip animations
-}
-```
-
-### CommonJS
-
-```javascript
-const { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } = require('a11ykit');
 ```
 
 ## API Reference
 
 ### `access(element, placeFocusBefore?)`
 
-Dynamically focus any element without hardcoded tabindex attributes.
+Dynamically place focus on any element without hardcoded tabindex attributes.
 
 **Parameters:**
 - `element: HTMLElement` - The element to receive focus
-- `placeFocusBefore?: string | boolean` - Optional. If `true`, creates a visually hidden span before the element and focuses that instead. If a string, uses that as the span's content.
+- `placeFocusBefore?: string` - Optional. If `true`, creates a visually hidden span before the element and places focus on that element instead. If a string, uses that as the span's content.
 
 **Behavior:**
-- Temporarily adds `tabindex="-1"` to make element focusable
-- Automatically cleans up on blur, restoring original tabindex state  
-- Preserves existing tabindex values using `data-ogti` attribute
-- Handles elements without parent nodes gracefully
+- Places focus on the target element
+  - If a string message is provided as a second parameter, the script will create a temporary, non-visible element that contains the message.
+- Screen readers will read the contents of the target element
+- Automatically cleans up on blur, and restores any original tabindex state
 
 **Example:**
 ```typescript
 const heading = document.querySelector('h2')!;
 
-// Focus the heading directly
+// Place focus on the heading directly
 access(heading);
 
-// Focus with a screen reader announcement
-access(heading, 'Skip to main content');
-
-// Focus invisibly before the heading
-access(heading, true);
+// Place focus on a hidden, temporary element with a screen reader announcement
+access(heading, 'File deleted');
 ```
 
 **Why use `access()`?**
-Hardcoded tabindex values make pages brittle and can cause accessibility issues. The `access()` function provides dynamic focus management without permanent DOM changes.
+The unchecked use of `tabindex` by development teams can lead to:
+- Inefficient and cluttered code
+- Unintended consequences, including accessibility issues
+
+As a best practice, teams should avoid hardcoding tabindex attributes, and instead use `access()` for focus management.
+
+#### What is focus management?
+
+Focus management is act of placing keyboard focus on a DOM element for the purpose of improving the accessible experience. Generally, focus should be left alone for the user to manage via their own actions. In some cases though, typically due to dynamic UI updates, focus can be lost and must be placed on another element in order to avoid the loss of focus.
+
+#### Use Cases
+
+Certain scenarios merit focus management:
+- Deletion: If an item is deleted via a delete button, and the delete button is removed from the UI, focus can be placed on a nearby heading.
+
 
 ---
 
 ### `announce(message, manners?)`
 
-Announce messages to screen readers via ARIA live regions.
+Announce any message 
 
 **Parameters:**
 - `message: string` - The message to announce
@@ -302,31 +267,3 @@ dist/                      # Built files
 ## License
 
 MIT © Patrick Fox
-
----
-
-## Migration from v0.x
-
-The library has been completely rewritten in TypeScript with a modern API:
-
-**Old (jQuery-based):**
-```javascript
-$(element).access(true);
-$.announce('message', 'polite');
-```
-
-**New (TypeScript/Vanilla JS):**
-```typescript  
-import { access, announce } from 'a11ykit';
-
-access(element, true);
-announce('message', 'polite');
-```
-
-Key changes:
-- ✅ TypeScript with full type safety
-- ✅ No jQuery dependency  
-- ✅ ES modules and tree shaking support
-- ✅ Modern build system (Rollup + Jest)
-- ✅ Comprehensive test coverage
-- ✅ Better browser compatibility

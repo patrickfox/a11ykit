@@ -39,7 +39,8 @@ describe('access function', () => {
     test('handles element with no original tabindex', () => {
       access(element);
       
-      expect(element.hasAttribute('data-ogti')).toBe(false);
+      expect(element.hasAttribute('data-ogti')).toBe(true);
+      expect(element.getAttribute('data-ogti')).toBe('');
       expect(element.getAttribute('tabindex')).toBe('-1');
     });
   });

@@ -1,16 +1,12 @@
+import { setTemporaryTabindex, restoreOriginalTabindex } from './tabindex-utils';
+
 export const access = (el: HTMLElement, placeFocusBefore?: string | boolean): void => {
   let focusEl: (element: HTMLElement) => void;
   let focusMethod: () => void;
-  let ogti: string | null;
   let tempEl: HTMLElement | undefined;
 
   const onBlurEl = (): void => {
-    if (el.getAttribute('data-ogti')) {
-      el.setAttribute('tabindex', ogti || '');
-    } else {
-      el.removeAttribute('tabindex');
-    }
-    el.removeAttribute('data-ogti');
+    restoreOriginalTabindex(el);
     el.removeEventListener('focusout', focusMethod);
   };
 
@@ -21,10 +17,10 @@ export const access = (el: HTMLElement, placeFocusBefore?: string | boolean): vo
     }
   };
 
-  focusEl = (theEl: HTMLElement): void => {
-    theEl.setAttribute('tabindex', '-1');
-    theEl.addEventListener('focusout', focusMethod);
-    theEl.focus();
+  focusEl = (el: HTMLElement): void => {
+    setTemporaryTabindex(el, '-1');
+    el.addEventListener('focusout', focusMethod);
+    el.focus();
   };
 
   focusMethod = onBlurEl;
@@ -41,17 +37,10 @@ export const access = (el: HTMLElement, placeFocusBefore?: string | boolean): vo
       focusEl(tempEl);
     } else {
       // No parent node, fall back to focusing the element directly
-      ogti = el.getAttribute('tabindex'); 
-      if (ogti) { 
-        el.setAttribute('data-ogti', ogti); 
-      }
+      focusMethod = onBlurEl;
       focusEl(el);
     }
   } else {
-    ogti = el.getAttribute('tabindex'); 
-    if (ogti) { 
-      el.setAttribute('data-ogti', ogti); 
-    }
     focusEl(el);
   }
 };

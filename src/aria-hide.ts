@@ -1,3 +1,5 @@
+import { setTemporaryTabindex, restoreOriginalTabindex, hasStoredTabindex } from './tabindex-utils';
+
 export const ariaHide = (parent?: HTMLElement): void => {
   const targetParent = parent || document.body;
 
@@ -13,8 +15,7 @@ export const ariaHide = (parent?: HTMLElement): void => {
 
   for (let i = 0; i < focusableElements.length; i++) {
     const el = focusableElements[i] as HTMLElement;
-    el.setAttribute('data-ogti', el.getAttribute('tabindex') || '');
-    el.setAttribute('tabindex', '-1');
+    setTemporaryTabindex(el, '-1');
   }
 };
 
@@ -26,12 +27,8 @@ export const ariaUnhide = (parent?: HTMLElement): void => {
 
   for (let i = 0; i < elsToRevert.length; i++) {
     const el = elsToRevert[i] as HTMLElement;
-    const elOgti = el.getAttribute('data-ogti');
-    if (elOgti?.length === 0) {
-      el.removeAttribute('tabindex');
-    } else if (elOgti) {
-      el.setAttribute('tabindex', elOgti);
+    if (hasStoredTabindex(el)) {
+      restoreOriginalTabindex(el);
     }
-    el.removeAttribute('data-ogti');
   }
 };
