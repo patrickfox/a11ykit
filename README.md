@@ -1,5 +1,10 @@
 # A11yKit
 
+[![npm version](https://img.shields.io/npm/v/@a11yfox/a11ykit.svg)](https://www.npmjs.com/package/@a11yfox/a11ykit)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@a11yfox/a11ykit)](https://bundlephobia.com/package/@a11yfox/a11ykit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/patrickfox/a11ykit/blob/master/LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/@a11yfox/a11ykit.svg)](https://www.npmjs.com/package/@a11yfox/a11ykit)
+
 ## Essential JavaScript utilities that empower modern accessibility
 
 A11yKit is a lightweight, JS accessibility (a11y) library that provides essential utilities for managing focus,  announcing screen reader (SR) messages, hiding content from SR's, and managing motion preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
