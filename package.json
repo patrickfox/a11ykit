@@ -1,10 +1,17 @@
 {
-  "name": "a11ykit",
+  "name": "@a11yfox/a11ykit",
   "version": "1.0.0",
   "description": "A set of utilities that empower modern accessibility.",
   "main": "dist/a11ykit.umd.js",
   "module": "dist/a11ykit.esm.js",
   "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/a11ykit.esm.js",
+      "require": "./dist/a11ykit.umd.js"
+    }
+  },
   "files": [
     "dist"
   ],
