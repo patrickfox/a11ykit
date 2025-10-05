@@ -140,7 +140,7 @@ describe('announce function', () => {
   describe('accessibility features', () => {
     test('announcer has proper ARIA role implied by aria-live', () => {
       const announcer = announce('Test message');
-      
+
       // Elements with aria-live automatically have an implicit role of "status" or "alert"
       expect(announcer.getAttribute('aria-live')).toBeTruthy();
     });
@@ -148,9 +148,35 @@ describe('announce function', () => {
     test('supports both polite and assertive politeness levels', () => {
       const politeAnnouncer = announce('Polite message', 'polite');
       expect(politeAnnouncer.getAttribute('aria-live')).toBe('polite');
-      
+
       const assertiveAnnouncer = announce('Assertive message', 'assertive');
       expect(assertiveAnnouncer.getAttribute('aria-live')).toBe('assertive');
+    });
+  });
+
+  describe('invalid manners parameter handling', () => {
+    test('defaults to polite when invalid string is provided', () => {
+      const announcer = announce('Test message', 'invalid');
+
+      expect(announcer.getAttribute('aria-live')).toBe('polite');
+    });
+
+    test('defaults to polite when empty string is provided', () => {
+      const announcer = announce('Test message', '');
+
+      expect(announcer.getAttribute('aria-live')).toBe('polite');
+    });
+
+    test('defaults to polite when case-mismatched value is provided', () => {
+      const announcer = announce('Test message', 'POLITE');
+
+      expect(announcer.getAttribute('aria-live')).toBe('polite');
+    });
+
+    test('defaults to polite when random string is provided', () => {
+      const announcer = announce('Test message', 'something-random');
+
+      expect(announcer.getAttribute('aria-live')).toBe('polite');
     });
   });
 

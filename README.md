@@ -7,7 +7,7 @@
 
 ## Essential JavaScript utilities that empower modern accessibility
 
-A11yKit is a lightweight, JS accessibility (a11y) library that provides essential utilities for managing focus,  announcing screen reader (SR) messages, hiding content from SR's, and managing motion preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
+A11yKit is a lightweight, JS accessibility (a11y) library that provides essential utilities for managing focus,  announcing screen reader (SR) messages, hiding content from SR's, and managing motion/animation preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
 
 ## Features
 
@@ -17,6 +17,18 @@ A11yKit is a lightweight, JS accessibility (a11y) library that provides essentia
 - 🎨 **Motion Preferences** - Detect and respond to `prefers-reduced-motion`
 - ⚡ **Lightweight** - Minimal footprint, no dependencies
 - ✅ **Well Tested** - Comprehensive Jest test suite with 97%+ coverage
+
+## Why does a11ykit exist?
+
+When auditing web sites for accessibility compliance, I often find well-meaning attempts to make the experience more accessible, but they are often ad-hoc, one-off fixes that clutter the HTML with unnecessary, redundant, and even detrimental code. Examples:
+- Harcoded `tabindex` attributes on elements that should not be focusable
+- Overzealous and unmanagable use of `aria-live` that creates a broken experience
+
+I firmly believe that accessibility solutions should be simple and elegant, minimze code clutter (and potential for future issues), and rely on a foundation of semantic HTML and minimal  `aria-*` and `role` attributes to improve the accessible experience. A11ykit provides a set of tools that makes managing announcing important messages to SR users and managing focus easy and manageable.
+
+With that said - A11yKit is not a cure-all for your accessibility challenges.  While the goal of A11yKit is to make these techniques easier to manage, missuse can lead to an inaccessible experience. Use these functions minimally and with great care - and **always test your experiences using screen readers**.
+
+Questions? Thoughts? Submit a issue/question on the [A11yKit GitHub page](https://github.com/patrickfox/a11ykit/issues).
 
 ## Getting Started
 
@@ -64,19 +76,18 @@ As a best practice, teams should avoid hardcoding tabindex attributes, and inste
 
 #### What is focus management?
 
-Focus management is act of placing keyboard focus on a DOM element for the purpose of improving the accessible experience. Generally, focus should be left alone for the user to manage via their own actions. In some cases though, typically due to dynamic UI updates, focus can be lost and must be placed on another element in order to avoid the loss of focus.
+Focus management is act of placing keyboard focus on a DOM element for the purpose of improving the accessible experience. Generally, focus should be left alone for the user to manage via their own actions. In some cases though, typically due to dynamic UI updates, focus can be lost and must be placed on another element in order to avoid the loss of focus. Placing focus on a non-focusable element (e.g. a heading) is not possible - unless it has a `tabindex`. A more efficient and flexible solution is to dynamically place focus using `access()`. `access()` works by dynamically adding a `tabindex="-1"` to the traget element, then calling `focus()` on that element. Once the user moves focus away, the `tabindex` attribute is removed (or restored to it's original state).
 
 #### Use Cases
 
 Certain scenarios merit focus management:
 - Deletion: If an item is deleted via a delete button, and the delete button is removed from the UI, focus can be placed on a nearby heading.
 
-
 ---
 
 ### `announce(message, manners?)`
 
-Announce any message 
+Announce any message to screen readers users
 
 **Parameters:**
 - `message: string` - The message to announce
