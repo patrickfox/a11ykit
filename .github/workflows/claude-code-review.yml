@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write  # Changed from read to write for commenting
+      issues: write         # Changed from read to write for commenting
       id-token: write
     
     steps:
