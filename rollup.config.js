@@ -4,6 +4,7 @@ import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
 const production = !process.env.ROLLUP_WATCH;
+const debugBuild = process.env.DEBUG_BUILD === 'true';
 
 export default [
   // ES Module build
@@ -27,7 +28,7 @@ export default [
         target: 'es2018',
         module: 'esnext'
       }),
-      production && terser()
+      production && !debugBuild && terser()
     ].filter(Boolean)
   },
   // UMD build for browsers
@@ -50,7 +51,7 @@ export default [
         target: 'es5',
         module: 'ESNext'
       }),
-      production && terser()
+      production && !debugBuild && terser()
     ].filter(Boolean)
   },
   // Minified UMD build

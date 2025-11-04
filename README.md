@@ -160,21 +160,22 @@ Properly managing ARIA states and focus trapping requires careful coordination o
 
 ---
 
-### `prefersReducedMotion`
+### `prefersReducedMotion()`
 
-Boolean value indicating user's motion preference.
+A utility function that 1) toggles a CSS class (`prm`) on the body tag based on the system's reduced motion setting, and 2) returns the the current reduced motion setting's value.
 
-**Type:** `boolean`
+**Type:** `() => boolean`
 
 **Behavior:**
-- Automatically updates based on `(prefers-reduced-motion: reduce)` media query
-- Adds/removes `prm` class on `document.body`  
-- Updates when user changes system preferences
+- SSR-safe with lazy initialization (only accesses `window` when first called)
+- Returns current value based on `(prefers-reduced-motion: reduce)` media query
+- Adds/removes `prm` class on `document.body`
+- Automatically updates when user changes system preferences
 
 **Example:**
 ```typescript
 // Check preference
-if (prefersReducedMotion) {
+if (prefersReducedMotion()) {
   // Skip or reduce animations
   element.style.transition = 'none';
 } else {
@@ -193,8 +194,8 @@ body.prm .animated {
 }
 ```
 
-**Why use `prefersReducedMotion`?**
-Respecting user motion preferences is crucial for accessibility, particularly for users with vestibular disorders. This provides an easy way to conditionally disable animations.
+**Why use `prefersReducedMotion()`?**
+Respecting user motion preferences is crucial for accessibility, particularly for users with vestibular disorders. This provides an easy, SSR-safe way to conditionally disable animations.
 
 ## Development
 

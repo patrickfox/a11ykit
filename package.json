@@ -19,6 +19,7 @@
     "build": "npm run test && rollup -c",
     "build:watch": "rollup -c -w",
     "build:only": "rollup -c",
+    "build:debug": "DEBUG_BUILD=true rollup -c",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -36,8 +37,6 @@
     "a11y",
     "frontend",
     "typescript",
-    "focus",
-    "aria",
     "screen-reader"
   ],
   "bugs": {

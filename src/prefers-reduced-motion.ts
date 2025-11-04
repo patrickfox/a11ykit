@@ -1,20 +1,28 @@
-let prefersReducedMotion: boolean;
+let _prefersReducedMotion: boolean = false;
+let _initialized: boolean = false;
 
-const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-function prmTest(e: MediaQueryListEvent | MediaQueryList | boolean): void {
-  const prm = e === true || (typeof e === 'object' && 'matches' in e && e.matches === true);
-  const dbc = document.body.classList;
-  if (prm) {
-    dbc.add('prm');
-  } else {
-    dbc.remove('prm');
-  }
-  prefersReducedMotion = prm;
+function setBodyClass(matches: boolean): void {
+  document.body.classList.toggle('prm', matches);
 }
 
-mql.addEventListener('change', prmTest);
+function updatePRM(e: MediaQueryListEvent): void {
+  _prefersReducedMotion = e.matches;
+  setBodyClass(_prefersReducedMotion);
+}
 
-prmTest(mql);
+function prefersReducedMotion(): boolean {
+  if (!_initialized) {
+    _initialized = true;
+
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    _prefersReducedMotion = mql.matches;
+
+    mql.addEventListener('change', updatePRM);
+
+    setBodyClass(_prefersReducedMotion);
+  }
+
+  return _prefersReducedMotion;
+}
 
 export { prefersReducedMotion };
