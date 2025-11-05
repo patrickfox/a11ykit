@@ -7,7 +7,7 @@
 
 ## Essential JavaScript utilities that empower modern accessibility
 
-A11yKit is a lightweight, JS accessibility (a11y) library that provides essential utilities for managing focus,  announcing screen reader (SR) messages, hiding content from SR's, and managing motion/animation preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
+A11yKit is a lightweight, JS accessibility (a11y) library that provides essential UI utilities for managing focus, announcing screen reader (SR) messages, hiding content from SR's, and managing motion/animation preferences. Built with modern web development in mind, it offers a clean API with full type safety and comprehensive browser support.
 
 ## Features
 
@@ -18,13 +18,13 @@ A11yKit is a lightweight, JS accessibility (a11y) library that provides essentia
 - ⚡ **Lightweight** - Minimal footprint, no dependencies
 - ✅ **Well Tested** - Comprehensive Jest test suite with 97%+ coverage
 
-## Why does a11ykit exist?
+## Why does A11yKit exist?
 
 When auditing web sites for accessibility compliance, I often find well-meaning attempts to make the experience more accessible, but they are often ad-hoc, one-off fixes that clutter the HTML with unnecessary, redundant, and even detrimental code. Examples:
 - Harcoded `tabindex` attributes on elements that should not be focusable
-- Overzealous and unmanagable use of `aria-live` that creates a broken experience
+- Overzealous and unmanageable use of `aria-live` that creates a broken experience
 
-I firmly believe that accessibility solutions should be simple and elegant, minimze code clutter (and potential for future issues), and rely on a foundation of semantic HTML and minimal  `aria-*` and `role` attributes to improve the accessible experience. A11ykit provides a set of tools that makes managing announcing important messages to SR users and managing focus easy and manageable.
+I firmly believe that accessibility solutions should be simple and elegant, minimze code clutter (and potential for future issues), and rely on a foundation of semantic HTML and minimal  `aria-*` and `role` attributes to improve the accessible experience. A11yKit provides a set of tools that makes managing announcing important messages to SR users and managing focus easy and manageable.
 
 With that said - A11yKit is not a cure-all for your accessibility challenges.  While the goal of A11yKit is to make these techniques easier to manage, missuse can lead to an inaccessible experience. Use these functions minimally and with great care - and **always test your experiences using screen readers**.
 
@@ -37,7 +37,7 @@ npm install @a11yfox/a11ykit
 ```
 
 ```js
-import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from 'a11ykit';
+import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from '@a11yfox/a11ykit';
 ```
 
 ## API Reference
@@ -162,7 +162,7 @@ Properly managing ARIA states and focus trapping requires careful coordination o
 
 ### `prefersReducedMotion()`
 
-A utility function that 1) toggles a CSS class (`prm`) on the body tag based on the system's reduced motion setting, and 2) returns the the current reduced motion setting's value.
+A utility function that 1) toggles a CSS class (`prm`) on the body tag based on the system's reduced motion setting, and 2) returns the the current reduced motion setting's value. The function also creates a change event listener that updates the `prm` class dynamically.
 
 **Type:** `() => boolean`
 
@@ -184,6 +184,7 @@ if (prefersReducedMotion()) {
 }
 
 // Or use CSS with the body class
+// NOTE: the .prm class won't be added until prefersReducedMotion() is called
 /* In CSS */
 .animated {
   transition: transform 0.3s ease;
