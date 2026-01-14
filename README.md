@@ -184,15 +184,23 @@ if (prefersReducedMotion()) {
 }
 
 // Or use CSS with the body class
-// NOTE: the .prm class won't be added until prefersReducedMotion() is called
-/* In CSS */
+// NOTE: the .prm class won't be added until prefersReducedMotion() is called, preferably on DOMContentLoaded
+
+// Initialize when DOM is ready to enable the CSS approach
+document.addEventListener('DOMContentLoaded', () => {
+  prefersReducedMotion();
+});
+
+/* In CSS, create your animations: */
 .animated {
   transition: transform 0.3s ease;
 }
 
+/* ...and reset/disable them when the .prm class is present: */
 body.prm .animated {
   transition: none;
 }
+
 ```
 
 **Why use `prefersReducedMotion()`?**
