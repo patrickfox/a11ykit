@@ -1,7 +1,7 @@
 # A11yKit
 
 [![npm version](https://img.shields.io/npm/v/@a11yfox/a11ykit.svg)](https://www.npmjs.com/package/@a11yfox/a11ykit)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@a11yfox/a11ykit)](https://bundlephobia.com/package/@a11yfox/a11ykit)
+[![Bundle Size](https://deno.bundlejs.com/?q=@a11yfox/a11ykit&badge)](https://bundlejs.com/?q=@a11yfox/a11ykit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/patrickfox/a11ykit/blob/master/LICENSE)
 [![npm downloads](https://img.shields.io/npm/dm/@a11yfox/a11ykit.svg)](https://www.npmjs.com/package/@a11yfox/a11ykit)
 
