@@ -66,17 +66,47 @@ const send = (res, status, body, headers = {}) => {
   res.end(body);
 };
 
+const isFile = async (abs) => {
+  const info = await stat(abs).catch(() => null);
+  return Boolean(info && info.isFile());
+};
+
+const guidance = (pathname) => `Not found: ${pathname}
+
+The harness pages live under /test-manual/:
+
+  ${ENTRY}                       main harness
+  ${ENTRY}announce-init.html     live region initialization rig
+`;
+
 const server = createServer(async (req, res) => {
   try {
-    let pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    const url = new URL(req.url, 'http://localhost');
+    let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/') pathname = ENTRY;
     if (pathname.endsWith('/')) pathname += 'index.html';
 
     const abs = resolve(join(ROOT, pathname));
-    if (!isAllowed(abs)) return send(res, 403, 'Forbidden');
 
-    const info = await stat(abs).catch(() => null);
-    if (!info || !info.isFile()) return send(res, 404, `Not found: ${pathname}`);
+    if (!isAllowed(abs)) {
+      // A bare filename almost always means the harness directory — someone
+      // dropped the /test-manual/ prefix. Send them where they meant to go
+      // rather than answering a typo with "Forbidden", which reads as a
+      // permissions fault in the server rather than a wrong path.
+      const inHarness = resolve(join(ROOT, 'test-manual', pathname));
+      if (isAllowed(inHarness) && (await isFile(inHarness))) {
+        const target = `/test-manual${pathname}${url.search}`;
+        return send(res, 302, `Redirecting to ${target}`, { Location: target });
+      }
+      // Genuinely outside the allowlist. Say which, so it is clear this is the
+      // allowlist doing its job and not a broken path.
+      const exists = await isFile(abs);
+      return send(res, exists ? 403 : 404, exists
+        ? `Forbidden: ${pathname}\n\nThis server only exposes ${ALLOWED.join(', ')}.\n`
+        : guidance(pathname));
+    }
+
+    if (!(await isFile(abs))) return send(res, 404, guidance(pathname));
 
     const body = await readFile(abs);
     send(res, 200, body, { 'Content-Type': MIME[extname(abs)] || 'application/octet-stream' });
@@ -106,6 +136,7 @@ server.once('listening', () => {
   A11yKit screen reader harness
 
     ${url}
+    ${url}announce-init.html   (live region initialization rig)
 
   Turn your screen reader on before you start, and work top to bottom —
   the first case is only valid on a fresh page load.

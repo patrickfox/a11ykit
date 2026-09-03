@@ -74,7 +74,9 @@ this; please keep it true when adding cases.
 
 ## The live region initialization rig
 
-`announce-init.html` is a separate, focused rig for one question: why the first
+<http://localhost:8080/test-manual/announce-init.html>
+
+A separate, focused rig for one question: why the first
 `announce()` of a page session is silent, and which fix works on real assistive
 technology.
 
