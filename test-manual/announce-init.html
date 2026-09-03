@@ -28,6 +28,14 @@
   h3 { font-size: .98rem; margin: 0 0 .4rem; }
   a { color: var(--accent); }
 
+  fieldset.env { border: 1px solid var(--line); border-radius: 8px; margin: 1.1rem 0;
+                 padding: .7rem 1rem .9rem; background: var(--card); }
+  fieldset.env legend { font-weight: 600; padding: 0 .4rem; font-size: .9rem; }
+  .env-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; }
+  .env-grid label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: .2rem; }
+  .env-grid input { width: 100%; padding: .38rem .5rem; border: 1px solid var(--line); border-radius: 5px;
+                    background: var(--bg); color: var(--fg); font: inherit; font-size: .88rem; }
+
   .note { border-left: 3px solid var(--accent); background: var(--sandbox);
           padding: .65rem .85rem; border-radius: 0 6px 6px 0; font-size: .92rem; margin: 1rem 0; }
   .note.warn { border-left-color: var(--warn); }
@@ -99,6 +107,20 @@
   before changing <code>src/announce.ts</code>. The baseline variant is a faithful copy of
   the current code.
 </div>
+
+<fieldset class="env">
+  <legend>Environment</legend>
+  <div class="env-grid">
+    <div><label for="env-at">Screen reader</label><input id="env-at" placeholder="VoiceOver"></div>
+    <div><label for="env-browser">Browser + version</label><input id="env-browser" placeholder="Safari 18"></div>
+    <div><label for="env-os">OS</label><input id="env-os" placeholder="macOS 15"></div>
+  </div>
+  <p style="font-size:.85rem;color:var(--muted);margin:.6rem 0 0">
+    Results are stored per browser, so each browser keeps its own run. Fill this in
+    before generating a report — the timing here is engine-specific and a report
+    without a browser on it cannot be compared to another.
+  </p>
+</fieldset>
 
 <main>
   <section>
@@ -306,6 +328,18 @@ aria-live change the AT re-registers when aria-live changes value.
     try { localStorage.setItem(STORE, JSON.stringify(r)); } catch (e) { /* private mode */ }
   }
   var results = load();
+
+  var ENV_KEY = STORE + '-env';
+  var env = {};
+  try { env = JSON.parse(localStorage.getItem(ENV_KEY)) || {}; } catch (e) { env = {}; }
+  ['env-at', 'env-browser', 'env-os'].forEach(function (id) {
+    var input = document.getElementById(id);
+    input.value = env[id] || '';
+    input.addEventListener('input', function () {
+      env[id] = input.value;
+      try { localStorage.setItem(ENV_KEY, JSON.stringify(env)); } catch (e) { /* private mode */ }
+    });
+  });
 
   var params = new URLSearchParams(location.search);
   var activeId = params.get('t');
@@ -523,7 +557,17 @@ aria-live change the AT re-registers when aria-live changes value.
   function mark(v) { return v === 'yes' ? 'spoke' : v === 'no' ? '**SILENT**' : 'not run'; }
 
   function buildReport() {
-    var out = ['## Live region initialization results', '', '_Fill in your AT / browser / OS._', ''];
+    var out = [
+      '## Live region initialization results',
+      '',
+      '| | |',
+      '|---|---|',
+      '| Screen reader | ' + (env['env-at'] || '_(not recorded)_') + ' |',
+      '| Browser | ' + (env['env-browser'] || '_(not recorded)_') + ' |',
+      '| OS | ' + (env['env-os'] || '_(not recorded)_') + ' |',
+      '| Date | ' + new Date().toISOString().slice(0, 10) + ' |',
+      ''
+    ];
     out.push('### Part 1 — sequences on the current implementation', '');
     out.push('| Sequence | 1st | 2nd |', '|---|---|---|');
     SEQUENCES.forEach(function (s) {
