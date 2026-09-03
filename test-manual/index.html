@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A11yKit — screen reader test harness</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1a1a1a; --muted: #5c5c5c; --line: #d8d8d4;
+    --card: #fff; --accent: #1a56b8; --pass: #1c6b3c; --fail: #a01b1b;
+    --hear: #0f4d2e; --not: #7a1414; --sandbox: #f2f4f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --fg: #e8e8e6; --muted: #a0a0a0; --line: #33363d;
+      --card: #1e2126; --accent: #7aa9f0; --pass: #6ede9e; --fail: #ff8f8f;
+      --hear: #6ede9e; --not: #ff8f8f; --sandbox: #262a31;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 1rem 4rem; background: var(--bg); color: var(--fg);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  header.page { padding: 2rem 0 1rem; border-bottom: 2px solid var(--line); }
+  h1 { font-size: 1.5rem; margin: 0 0 .3rem; }
+  .sub { color: var(--muted); margin: 0; font-size: .95rem; }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 .25rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
+  h2 .sig { font-weight: 400; color: var(--muted); font-size: .85rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  h3 { font-size: 1rem; margin: 0 0 .5rem; }
+
+  fieldset.env { border: 1px solid var(--line); border-radius: 8px; margin: 1.25rem 0; padding: .75rem 1rem 1rem; background: var(--card); }
+  fieldset.env legend { font-weight: 600; padding: 0 .4rem; font-size: .9rem; }
+  .env-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem; }
+  .env-grid label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .2rem; }
+  .env-grid input { width: 100%; padding: .4rem .5rem; border: 1px solid var(--line); border-radius: 5px;
+                    background: var(--bg); color: var(--fg); font: inherit; font-size: .9rem; }
+
+  .case { border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 8px;
+          background: var(--card); padding: 1rem 1.1rem; margin: 1rem 0; }
+  .case[data-result="pass"] { border-left-color: var(--pass); }
+  .case[data-result="fail"] { border-left-color: var(--fail); }
+  .case.blocked { opacity: .65; }
+
+  dl.spec { margin: 0 0 .9rem; display: grid; grid-template-columns: max-content 1fr; gap: .3rem .7rem; font-size: .93rem; }
+  dl.spec dt { font-weight: 700; font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; padding-top: .18rem; }
+  dl.spec dd { margin: 0; }
+  dt.do  { color: var(--accent); }
+  dt.hear { color: var(--hear); }
+  dt.not  { color: var(--not); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+  button { font: inherit; font-size: .9rem; padding: .42rem .85rem; border-radius: 6px;
+           border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .sandbox { background: var(--sandbox); border: 1px dashed var(--line); border-radius: 6px;
+             padding: .8rem; margin: .6rem 0; }
+  .sandbox p { margin: .3rem 0; font-size: .9rem; }
+  .sandbox-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em;
+                   color: var(--muted); font-weight: 700; margin-bottom: .4rem; }
+
+  fieldset.verdict { border: 0; padding: .6rem 0 0; margin: .5rem 0 0; border-top: 1px solid var(--line); }
+  fieldset.verdict legend { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+                            font-weight: 700; color: var(--muted); }
+  .verdict-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  .verdict-row label { font-size: .9rem; display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }
+  .verdict-row input[type=text] { flex: 1 1 14rem; padding: .35rem .5rem; border: 1px solid var(--line);
+                                  border-radius: 5px; background: var(--bg); color: var(--fg); font: inherit; font-size: .88rem; }
+
+  .note { border-left: 3px solid var(--accent); background: var(--sandbox); padding: .6rem .8rem;
+          border-radius: 0 6px 6px 0; font-size: .9rem; margin: .75rem 0; }
+  .note strong { display: block; margin-bottom: .2rem; }
+
+  footer.actions { position: sticky; bottom: 0; background: var(--bg); border-top: 2px solid var(--line);
+                   padding: .8rem 0; margin-top: 2.5rem; display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+  #tally { font-size: .9rem; color: var(--muted); margin-right: auto; }
+  textarea#report { width: 100%; min-height: 16rem; margin-top: .8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                    font-size: .82rem; padding: .7rem; border: 1px solid var(--line); border-radius: 6px;
+                    background: var(--card); color: var(--fg); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
+         background: var(--sandbox); padding: .1em .35em; border-radius: 3px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+                     overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  #load-error { display: none; border: 2px solid var(--fail); color: var(--fail);
+                border-radius: 8px; padding: 1rem; margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <h1>A11yKit — screen reader test harness</h1>
+  <p class="sub">
+    Manual verification of behavior the jsdom suite cannot observe. Loads
+    <code>../dist/a11ykit.esm.js</code> — the artifact that ships, so run
+    <code>npm run build:only</code> first.
+  </p>
+</header>
+
+<div id="load-error" role="alert">
+  <strong>The bundle failed to load.</strong>
+  <p>Run <code>npm run build:only</code>, then reload. If you opened this file directly
+  (<code>file://</code>), serve it over HTTP instead — ES modules will not load from the filesystem.</p>
+</div>
+
+<div class="note">
+  <strong>Before you start</strong>
+  This harness is deliberately silent: it has no live regions of its own, so anything
+  you hear comes from A11yKit. Turn your screen reader on now, fill in the environment
+  below, and work top to bottom — the first test is only valid on a fresh page load.
+</div>
+
+<fieldset class="env">
+  <legend>Environment</legend>
+  <div class="env-grid">
+    <div><label for="env-at">Screen reader + version</label><input id="env-at" placeholder="NVDA 2025.1"></div>
+    <div><label for="env-browser">Browser + version</label><input id="env-browser" placeholder="Firefox 142"></div>
+    <div><label for="env-os">OS</label><input id="env-os" placeholder="Windows 11"></div>
+    <div><label for="env-lib">Library version</label><input id="env-lib" readonly></div>
+  </div>
+</fieldset>
+
+<main id="cases"></main>
+
+<footer class="actions">
+  <span id="tally">No results recorded yet.</span>
+  <button type="button" id="btn-report">Generate markdown report</button>
+  <button type="button" class="secondary" id="btn-copy">Copy report</button>
+  <button type="button" class="secondary" id="btn-reset">Reset results</button>
+</footer>
+<label for="report" class="visually-hidden">Markdown report</label>
+<textarea id="report" hidden readonly></textarea>
+
+</div>
+
+<script type="module">
+import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
+  from '../dist/a11ykit.esm.js';
+
+const STORE = 'a11ykit-harness-v1';
+
+/* ------------------------------------------------------------------ *
+ * Test cases.
+ *
+ * `api` must name an export from src/index.ts — tests/harness-sync.test.ts
+ * fails the build if an export has no case here, which is what keeps this
+ * page honest as the API grows.
+ * ------------------------------------------------------------------ */
+const CASES = [
+  {
+    id: 'announce-first',
+    api: 'announce',
+    group: 'announce(message, manners?)',
+    title: 'The very first announcement of the page session is spoken',
+    issue: 15,
+    freshLoadOnly: true,
+    do: 'Click “Announce” below. This must be the first announcement made on this page load.',
+    hear: '“First announcement after load”',
+    not: 'Silence. A dropped first announcement is the bug — every later call working is exactly the symptom.',
+    note: 'The live region is created on first use. Several screen readers ignore mutations to a region that was not already in the accessibility tree, so this can only be tested once per load. Reload the page to run it again.',
+    actions: [{ label: 'Announce', run: () => announce('First announcement after load') }]
+  },
+  {
+    id: 'announce-polite',
+    api: 'announce',
+    group: 'announce(message, manners?)',
+    title: 'Polite announcement does not interrupt',
+    do: 'Start reading this paragraph with your screen reader, then click “Announce polite” while it is still speaking.',
+    hear: 'The current sentence finishes first, then “Settings saved”.',
+    not: 'The message cutting off what was being read.',
+    actions: [{ label: 'Announce polite', run: () => announce('Settings saved') }]
+  },
+  {
+    id: 'announce-assertive',
+    api: 'announce',
+    group: 'announce(message, manners?)',
+    title: 'Assertive announcement interrupts',
+    do: 'Start reading this paragraph, then click “Announce assertive” while it is still speaking.',
+    hear: 'Speech is interrupted immediately by “Connection lost”.',
+    not: 'The message waiting politely for the current sentence to end.',
+    actions: [{ label: 'Announce assertive', run: () => announce('Connection lost', 'assertive') }]
+  },
+  {
+    id: 'announce-manner-switch',
+    api: 'announce',
+    group: 'announce(message, manners?)',
+    title: 'Switching manner on the shared region still works',
+    do: 'Click “Polite”, wait for it to finish, then click “Assertive”, then “Polite” again.',
+    hear: 'All three announcements, with the assertive one interrupting.',
+    not: 'A missing announcement after a manner change. Both manners share one region, so a change that the AT does not pick up would show here.',
+    actions: [
+      { label: 'Polite', run: () => announce('Polite message') },
+      { label: 'Assertive', run: () => announce('Assertive message', 'assertive') }
+    ]
+  },
+  {
+    id: 'announce-repeat',
+    api: 'announce',
+    group: 'announce(message, manners?)',
+    title: 'The same message announced twice is spoken twice',
+    do: 'Click “Announce” once, wait for it to finish, then click it again.',
+    hear: '“Item added to cart” both times.',
+    not: 'Silence on the second click. Identical consecutive content can be treated as no change unless the region is cleared between messages.',
+    actions: [{ label: 'Announce', run: () => announce('Item added to cart') }]
+  },
+  {
+    id: 'announce-escaping',
+    api: 'announce',
+    group: 'announce(message, manners?)',
+    title: 'Markup in a message is read as literal text',
+    issue: 14,
+    do: 'Click “Announce markup”.',
+    hear: 'The angle brackets read literally — “less than strong greater than Saved”, or your screen reader’s equivalent.',
+    not: 'The word “Saved” alone with the markup silently rendered, which would mean the string was parsed as HTML.',
+    actions: [{ label: 'Announce markup', run: () => announce('<strong>Saved</strong>') }]
+  },
+
+  {
+    id: 'access-basic',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?)',
+    title: 'Focus moves to a non-interactive element and its content is read',
+    do: 'Click “Move focus to heading”.',
+    hear: '“Order confirmed, heading level 3” — the heading text and its role.',
+    not: 'Silence, or focus staying on the button you just clicked.',
+    sandbox: '<h3 data-target>Order confirmed</h3><p>Your order will arrive Thursday.</p>',
+    actions: [{ label: 'Move focus to heading', run: (sb) => access(sb.querySelector('[data-target]')) }]
+  },
+  {
+    id: 'access-message',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?)',
+    title: 'A message is announced before the target element',
+    do: 'Click “Move focus with message”.',
+    hear: '“Three items removed” first, then the heading “Cart updated”.',
+    not: 'Only the heading, or the message read after it.',
+    sandbox: '<h3 data-target>Cart updated</h3><p>Your cart now has 2 items.</p>',
+    actions: [{
+      label: 'Move focus with message',
+      run: (sb) => access(sb.querySelector('[data-target]'), 'Three items removed')
+    }]
+  },
+  {
+    id: 'access-cleanup',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?)',
+    title: 'Focus target is cleaned up on blur and leaves no trace',
+    do: 'Click “Move focus”, then press Tab to move away, then Shift+Tab back through this region.',
+    hear: 'Nothing left behind — the heading is no longer a focus stop when you tab back through.',
+    not: 'A stray empty stop in the tab order, or the heading still taking focus.',
+    sandbox: '<h3 data-target>Profile saved</h3><p>Changes are live.</p><button type="button">A button after it</button>',
+    actions: [{ label: 'Move focus', run: (sb) => access(sb.querySelector('[data-target]'), 'Profile saved') }]
+  },
+
+  {
+    id: 'ariahide-basic',
+    api: 'ariaHide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Hidden content is unreachable by both virtual cursor and Tab',
+    do: 'Click “Hide”. Then browse the region below with your virtual cursor, and separately Tab through it.',
+    hear: 'Nothing from inside the region — no text, no link, no button, no field.',
+    not: 'Any of the content still being reachable. Reaching it by Tab but not the virtual cursor means aria-hidden applied but the tab order did not.',
+    sandbox: '<p>Promotional banner text.</p><a href="#promo">A link</a> <button type="button">A button</button> <input aria-label="Email" placeholder="Email">',
+    actions: [
+      { label: 'Hide', run: (sb) => ariaHide(sb) },
+      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
+    ]
+  },
+  {
+    id: 'ariaunhide-restore',
+    api: 'ariaUnhide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Unhiding restores the original tab order exactly',
+    issue: 12,
+    do: 'Tab through the region and note the order. Click “Hide”, then “Unhide”, then Tab through again.',
+    hear: 'The same three stops in the same order as before, including the field with an explicit tabindex.',
+    not: 'A control that is now skipped. That is the nested-backup bug: an element left permanently at tabindex="-1".',
+    sandbox: '<a href="#a">First</a> <button type="button">Second</button> <input aria-label="Third" tabindex="0" placeholder="Third">',
+    actions: [
+      { label: 'Hide', run: (sb) => ariaHide(sb) },
+      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
+    ]
+  },
+  {
+    id: 'ariahide-nested',
+    api: 'ariaHide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Nested hide and unhide leaves the tab order intact',
+    issue: 12,
+    do: 'Tab through and note the order. Click “Hide inner”, “Hide outer”, “Unhide outer”, “Unhide inner”, then Tab through again.',
+    hear: 'Both controls reachable again, in the original order.',
+    not: 'The inner link permanently skipped — the failure this sequence reproduced before the fix.',
+    sandbox: '<div data-inner style="padding:.4rem;border:1px dotted var(--line)"><a href="#n">Inner link</a></div><button type="button">Outer button</button>',
+    actions: [
+      { label: 'Hide inner', run: (sb) => ariaHide(sb.querySelector('[data-inner]')) },
+      { label: 'Hide outer', run: (sb) => ariaHide(sb) },
+      { label: 'Unhide outer', secondary: true, run: (sb) => ariaUnhide(sb) },
+      { label: 'Unhide inner', secondary: true, run: (sb) => ariaUnhide(sb.querySelector('[data-inner]')) }
+    ]
+  },
+  {
+    id: 'ariahide-async',
+    api: 'ariaHide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Known limitation: content added after hiding stays in the tab order',
+    issue: 16,
+    do: 'Click “Hide”, then “Add a button”, then Tab through the region.',
+    hear: 'The new button is still reachable by Tab, even though the region is hidden.',
+    not: 'Nothing — this case is expected to FAIL today. ariaHide() takes a one-time snapshot. Record it as a fail; native inert in 2.0.0 is what fixes it.',
+    note: 'Documented limitation, not a regression. This case exists to make the 2.0.0 inert migration measurable — it should flip to pass with no other change.',
+    sandbox: '<p>Region content.</p><button type="button">Original button</button> <span data-slot></span>',
+    actions: [
+      { label: 'Hide', run: (sb) => ariaHide(sb) },
+      { label: 'Add a button', run: (sb) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = 'Added after hiding';
+          sb.querySelector('[data-slot]').append(' ', b);
+      }},
+      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
+    ]
+  },
+
+  {
+    id: 'prm',
+    api: 'prefersReducedMotion',
+    group: 'prefersReducedMotion()',
+    title: 'Reports the OS setting and toggles the prm class',
+    do: 'Click “Check”. Then change the OS reduced-motion setting and click “Check” again without reloading.',
+    hear: 'Nothing — this is a visual check. The readout below must match the OS setting both times, and <code>&lt;body class="prm"&gt;</code> must appear and disappear to match.',
+    not: 'A stale value after changing the OS setting, which would mean the change listener is not firing.',
+    sandbox: '<p><strong>Returned:</strong> <span data-out>not checked yet</span></p><p><strong>body has .prm:</strong> <span data-cls>—</span></p>',
+    actions: [{
+      label: 'Check', run: (sb) => {
+        sb.querySelector('[data-out]').textContent = String(prefersReducedMotion());
+        sb.querySelector('[data-cls]').textContent = String(document.body.classList.contains('prm'));
+      }
+    }]
+  }
+];
+
+/* ------------------------------------------------------------------ *
+ * Rendering
+ * ------------------------------------------------------------------ */
+const results = loadResults();
+const env = loadEnv();
+const root = document.getElementById('cases');
+
+// The first-announce case is only meaningful before anything has used the
+// live region. If a previous interaction already created it, say so plainly
+// rather than letting someone record a meaningless result.
+const announcerExisted = !!document.getElementById('announce-this');
+
+let currentGroup = null;
+for (const c of CASES) {
+  if (c.group !== currentGroup) {
+    currentGroup = c.group;
+    const h2 = document.createElement('h2');
+    h2.innerHTML = `<span class="sig">${escapeHtml(currentGroup)}</span>`;
+    root.append(h2);
+  }
+  root.append(renderCase(c));
+}
+
+function renderCase(c) {
+  const blocked = c.freshLoadOnly && announcerExisted;
+  const el = document.createElement('section');
+  el.className = 'case' + (blocked ? ' blocked' : '');
+  el.dataset.api = c.api;          // read by tests/harness-sync.test.ts
+  el.dataset.case = c.id;
+  el.dataset.result = results[c.id]?.verdict || '';
+
+  const issue = c.issue ? ` <a href="https://github.com/patrickfox/a11ykit/issues/${c.issue}">#${c.issue}</a>` : '';
+  el.innerHTML = `
+    <h3>${escapeHtml(c.title)}${issue}</h3>
+    <dl class="spec">
+      <dt class="do">Do</dt><dd>${escapeHtml(c.do)}</dd>
+      <dt class="hear">Expect</dt><dd>${c.hear}</dd>
+      <dt class="not">Fails if</dt><dd>${escapeHtml(c.not)}</dd>
+    </dl>
+    ${c.note ? `<div class="note">${escapeHtml(c.note)}</div>` : ''}
+    ${blocked ? `<div class="note"><strong>Not testable right now</strong>
+       The live region already exists on this page. Reload to run this case.</div>` : ''}
+    <div class="controls"></div>
+    ${c.sandbox ? `<div class="sandbox"><div class="sandbox-label">Test region</div>
+       <div data-sandbox>${c.sandbox}</div></div>` : ''}
+    <fieldset class="verdict">
+      <legend>Result</legend>
+      <div class="verdict-row">
+        <label><input type="radio" name="v-${c.id}" value="pass"> Pass</label>
+        <label><input type="radio" name="v-${c.id}" value="fail"> Fail</label>
+        <label><input type="radio" name="v-${c.id}" value="na"> N/A</label>
+        <input type="text" name="n-${c.id}" placeholder="Notes — what you actually heard"
+               aria-label="Notes for: ${escapeHtml(c.title)}">
+      </div>
+    </fieldset>`;
+
+  const sb = el.querySelector('[data-sandbox]');
+  const controls = el.querySelector('.controls');
+  for (const a of c.actions) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = a.label;
+    if (a.secondary) btn.className = 'secondary';
+    if (blocked) btn.disabled = true;
+    btn.addEventListener('click', () => a.run(sb));
+    controls.append(btn);
+  }
+  if (c.sandbox) {
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'secondary';
+    reset.textContent = 'Reset region';
+    reset.disabled = blocked;
+    reset.addEventListener('click', () => { sb.innerHTML = c.sandbox; });
+    controls.append(reset);
+  }
+
+  const saved = results[c.id];
+  if (saved) {
+    const radio = el.querySelector(`input[value="${saved.verdict}"]`);
+    if (radio) radio.checked = true;
+    el.querySelector(`input[name="n-${c.id}"]`).value = saved.notes || '';
+  }
+
+  el.addEventListener('change', () => {
+    const checked = el.querySelector(`input[name="v-${c.id}"]:checked`);
+    results[c.id] = {
+      verdict: checked ? checked.value : '',
+      notes: el.querySelector(`input[name="n-${c.id}"]`).value
+    };
+    el.dataset.result = results[c.id].verdict;
+    saveResults();
+    updateTally();
+  });
+  el.addEventListener('input', (e) => {
+    if (e.target.type !== 'text') return;
+    results[c.id] = {
+      verdict: results[c.id]?.verdict || '',
+      notes: e.target.value
+    };
+    saveResults();
+  });
+
+  return el;
+}
+
+/* ------------------------------------------------------------------ *
+ * Environment fields, persistence, reporting
+ * ------------------------------------------------------------------ */
+const ENV_IDS = ['env-at', 'env-browser', 'env-os'];
+for (const id of ENV_IDS) {
+  const input = document.getElementById(id);
+  input.value = env[id] || '';
+  input.addEventListener('input', () => {
+    env[id] = input.value;
+    localStorage.setItem(STORE + '-env', JSON.stringify(env));
+  });
+}
+
+// Best-effort: the harness must still work if this is unavailable.
+const libField = document.getElementById('env-lib');
+libField.value = 'unknown';
+if (typeof fetch === 'function') {
+  fetch('../package.json')
+    .then((r) => r.json())
+    .then((p) => { libField.value = p.version; })
+    .catch(() => { /* leave as unknown */ });
+}
+
+function loadResults() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; }
+}
+function saveResults() {
+  try { localStorage.setItem(STORE, JSON.stringify(results)); } catch { /* private mode */ }
+}
+function loadEnv() {
+  try { return JSON.parse(localStorage.getItem(STORE + '-env')) || {}; } catch { return {}; }
+}
+
+function updateTally() {
+  const v = CASES.map((c) => results[c.id]?.verdict).filter(Boolean);
+  const n = (x) => v.filter((r) => r === x).length;
+  document.getElementById('tally').textContent = v.length
+    ? `${n('pass')} pass · ${n('fail')} fail · ${n('na')} n/a · ${CASES.length - v.length} unrecorded`
+    : 'No results recorded yet.';
+}
+updateTally();
+
+document.getElementById('btn-report').addEventListener('click', () => {
+  const ta = document.getElementById('report');
+  ta.value = buildReport();
+  ta.hidden = false;
+  ta.focus();
+});
+
+document.getElementById('btn-copy').addEventListener('click', async () => {
+  const ta = document.getElementById('report');
+  if (ta.hidden) { ta.value = buildReport(); ta.hidden = false; }
+  try { await navigator.clipboard.writeText(ta.value); }
+  catch { ta.select(); }
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  for (const k of Object.keys(results)) delete results[k];
+  saveResults();
+  location.reload();
+});
+
+function buildReport() {
+  const at = env['env-at'] || '(not recorded)';
+  const browser = env['env-browser'] || '(not recorded)';
+  const os = env['env-os'] || '(not recorded)';
+  const lib = document.getElementById('env-lib').value || '(unknown)';
+  const sym = { pass: '✅ pass', fail: '❌ fail', na: '➖ n/a' };
+
+  const lines = [
+    `## Screen reader test run`,
+    ``,
+    `| | |`,
+    `|---|---|`,
+    `| Screen reader | ${at} |`,
+    `| Browser | ${browser} |`,
+    `| OS | ${os} |`,
+    `| A11yKit | ${lib} |`,
+    `| Date | ${new Date().toISOString().slice(0, 10)} |`,
+    ``,
+    `| Case | Result | Notes |`,
+    `|---|---|---|`
+  ];
+  for (const c of CASES) {
+    const r = results[c.id];
+    const verdict = r?.verdict ? sym[r.verdict] : '⬜ not run';
+    const notes = (r?.notes || '').replace(/\|/g, '\\|') || '—';
+    const ref = c.issue ? ` (#${c.issue})` : '';
+    lines.push(`| ${c.title}${ref} | ${verdict} | ${notes} |`);
+  }
+
+  const fails = CASES.filter((c) => results[c.id]?.verdict === 'fail');
+  if (fails.length) {
+    lines.push(``, `### Failures`, ``);
+    for (const c of fails) {
+      lines.push(`- **${c.title}**${c.issue ? ` (#${c.issue})` : ''}`);
+      lines.push(`  - Expected: ${stripTags(c.hear)}`);
+      if (results[c.id].notes) lines.push(`  - Observed: ${results[c.id].notes}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+function stripTags(s) { return String(s).replace(/<[^>]*>/g, ''); }
+
+window.addEventListener('error', (e) => {
+  if (e.message && /import|module/i.test(e.message)) {
+    document.getElementById('load-error').style.display = 'block';
+  }
+});
+</script>
+<script type="module">
+  // Surfaces a missing/broken bundle rather than leaving a silently dead page.
+  import('../dist/a11ykit.esm.js').catch(() => {
+    document.getElementById('load-error').style.display = 'block';
+  });
+</script>
+</body>
+</html>

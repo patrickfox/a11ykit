@@ -318,21 +318,37 @@ npm run test:ci
 ```
 
 The test suite includes:
-- **64 comprehensive tests** covering all functions
+- **93 tests** covering all functions
 - **DOM manipulation testing** with jsdom
 - **Focus management and event handling**
 - **Accessibility-specific assertions**
 - **Edge case handling** (missing elements, no parent nodes, etc.)
-- **97%+ code coverage**
+- **99% code coverage**
+
+#### Screen reader testing
+
+jsdom verifies DOM state, not what a screen reader says. Behavior that only
+assistive technology can confirm — whether the first announcement of a page
+session is spoken, whether `polite` waits its turn, whether hidden content is
+genuinely unreachable — is covered by a manual harness:
+
+```bash
+npm run test:manual   # builds, then serves at http://localhost:8080/test-manual/
+```
+
+Each case states what to do, what you should hear, and what specifically counts
+as a failure, and the results export as a markdown table. See
+[`test-manual/README.md`](test-manual/README.md).
 
 ### Project Structure
 
 ```
 src/
 ├── access.ts              # Focus management
-├── announce.ts            # Screen reader announcements  
+├── announce.ts            # Screen reader announcements
 ├── aria-hide.ts           # ARIA state management
 ├── prefers-reduced-motion.ts # Motion preference detection
+├── tabindex-utils.ts      # Shared tabindex bookkeeping
 └── index.ts               # Main exports
 
 tests/
@@ -340,7 +356,13 @@ tests/
 ├── announce.test.ts       # Announcement tests
 ├── aria-hide.test.ts      # ARIA state tests
 ├── prefers-reduced-motion.test.ts # Motion preference tests
+├── harness-sync.test.ts   # Fails if an export has no manual test case
+├── harness-smoke.test.ts  # Checks the manual harness drives the real bundle
 └── setup.ts               # Test configuration
+
+test-manual/               # Manual screen reader harness
+├── index.html             # Test cases, run against dist/
+└── README.md              # How to run it, and what to record
 
 dist/                      # Built files
 ├── a11ykit.esm.js        # ES Module (modern)

@@ -29,6 +29,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --coverage --watchAll=false",
+    "test:manual": "npm run build:only && node -e \"console.log('\\n  Screen reader harness: http://localhost:8080/test-manual/\\n')\" && python3 -m http.server 8080",
     "prepublishOnly": "npm run test:ci && npm run build:only"
   },
   "author": "Patrick Fox <accessibilityfox@gmail.com>",
