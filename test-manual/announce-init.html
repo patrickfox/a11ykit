@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A11yKit — live region initialization rig</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1a1a1a; --muted: #5c5c5c; --line: #d8d8d4;
+    --card: #fff; --accent: #1a56b8; --pass: #1c6b3c; --fail: #a01b1b;
+    --sandbox: #f2f4f8; --warn: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --fg: #e8e8e6; --muted: #a0a0a0; --line: #33363d;
+      --card: #1e2126; --accent: #7aa9f0; --pass: #6ede9e; --fail: #ff8f8f;
+      --sandbox: #262a31; --warn: #e0b050;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0 1rem 4rem; background: var(--bg); color: var(--fg);
+         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 60rem; margin: 0 auto; }
+  header.page { padding: 2rem 0 1rem; border-bottom: 2px solid var(--line); }
+  h1 { font-size: 1.45rem; margin: 0 0 .3rem; }
+  .sub { color: var(--muted); margin: 0; font-size: .95rem; }
+  h2 { font-size: 1.1rem; margin: 2.25rem 0 .5rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
+  h3 { font-size: .98rem; margin: 0 0 .4rem; }
+  a { color: var(--accent); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--sandbox);
+          padding: .65rem .85rem; border-radius: 0 6px 6px 0; font-size: .92rem; margin: 1rem 0; }
+  .note.warn { border-left-color: var(--warn); }
+  .note strong { display: block; margin-bottom: .2rem; }
+
+  .active-test { border: 2px solid var(--accent); border-radius: 8px; background: var(--card);
+                 padding: 1.1rem 1.2rem; margin: 1.25rem 0; }
+  .active-test .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+                        font-weight: 700; color: var(--accent); margin-bottom: .3rem; }
+  .active-test p { margin: .4rem 0; font-size: .93rem; }
+  .mech { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem;
+          background: var(--sandbox); padding: .5rem .7rem; border-radius: 5px; margin: .6rem 0;
+          white-space: pre-wrap; }
+
+  .steps { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; align-items: center; }
+  button { font: inherit; font-size: .9rem; padding: .45rem .9rem; border-radius: 6px;
+           border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  fieldset.verdict { border: 0; padding: .7rem 0 0; margin: .7rem 0 0; border-top: 1px solid var(--line); }
+  fieldset.verdict legend { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+                            font-weight: 700; color: var(--muted); }
+  .vrow { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; align-items: center; margin: .35rem 0; }
+  .vrow > span.q { font-size: .9rem; min-width: 13rem; }
+  .vrow label { font-size: .9rem; display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; margin-top: .6rem; }
+  th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--line); }
+  th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  td.r-pass { color: var(--pass); font-weight: 600; }
+  td.r-fail { color: var(--fail); font-weight: 600; }
+  tr.current { background: var(--sandbox); }
+  td button { padding: .2rem .55rem; font-size: .8rem; }
+
+  textarea { width: 100%; min-height: 14rem; margin-top: .8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+             font-size: .8rem; padding: .7rem; border: 1px solid var(--line); border-radius: 6px;
+             background: var(--card); color: var(--fg); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
+         background: var(--sandbox); padding: .1em .35em; border-radius: 3px; }
+  .actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem;
+             padding-top: 1rem; border-top: 2px solid var(--line); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+                     overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <h1>Live region initialization rig</h1>
+  <p class="sub">
+    Determines why the first <code>announce()</code> is dropped, and which fix works on real
+    assistive technology. <a href="./">← main harness</a>
+  </p>
+</header>
+
+<div class="note warn">
+  <strong>One test per page load</strong>
+  Every test here depends on starting from a page with no live region, so selecting a
+  test reloads the page. Run the test immediately after it loads, record the result,
+  then pick the next one. Do not click a test's buttons twice.
+</div>
+
+<div class="note">
+  <strong>This page does not import the library</strong>
+  Each variant is implemented inline, because the point is to choose an implementation
+  before changing <code>src/announce.ts</code>. The baseline variant is a faithful copy of
+  the current code.
+</div>
+
+<main>
+  <section>
+    <h2>Part 1 — Why is the first announcement dropped?</h2>
+    <p style="font-size:.93rem">
+      Two explanations fit the reports so far, and they need different fixes. Every
+      sequence below uses the <strong>current</strong> implementation, unchanged.
+    </p>
+    <div class="mech">Ordinality       the region must be in the a11y tree BEFORE any content write
+                 predicts: the 2nd announcement speaks in every sequence
+
+aria-live change the AT re-registers when aria-live changes value.
+                 Each call does: manner -> 'off' -> manner.
+                 Same manner twice nets NO change once coalesced.
+                 predicts: same-manner sequences FAIL on the 2nd too</div>
+    <p style="font-size:.93rem">
+      <strong>The deciding sequence is polite → polite.</strong> If its second announcement
+      speaks, it is ordinality. If it stays silent while polite → assertive speaks, the
+      <code>aria-live</code> toggle is the culprit — a worse bug than reported, since it would
+      mean consecutive same-manner announcements usually fail.
+    </p>
+    <table id="t-part1"><thead><tr>
+      <th>Sequence</th><th>1st speaks?</th><th>2nd speaks?</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>Part 2 — Which initialization actually fixes it?</h2>
+    <p style="font-size:.93rem">
+      Each variant applies its setup, then makes <strong>one</strong> announcement. The
+      question is only ever: <em>did that first announcement speak?</em>
+    </p>
+    <table id="t-part2"><thead><tr>
+      <th>Variant</th><th>Keeps <code>sideEffects:false</code></th><th>Speaks?</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <div id="active"></div>
+</main>
+
+<div class="actions">
+  <button type="button" id="btn-report">Generate report</button>
+  <button type="button" class="secondary" id="btn-copy">Copy</button>
+  <button type="button" class="secondary" id="btn-reset">Reset all results</button>
+</div>
+<label for="report" class="visually-hidden">Markdown report</label>
+<textarea id="report" hidden readonly></textarea>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORE = 'a11ykit-announce-init-v1';
+  var REGION_STYLE = 'position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;';
+
+  /* ---------------------------------------------------------------- *
+   * Region helpers. Nothing here runs until a test asks for it, so a
+   * page load with no test selected leaves the a11y tree untouched.
+   * ---------------------------------------------------------------- */
+  function makeRegion(id, live) {
+    var el = document.createElement('div');
+    el.id = id;
+    el.setAttribute('style', REGION_STYLE);
+    if (live) el.setAttribute('aria-live', live);
+    document.body.appendChild(el);
+    return el;
+  }
+  function getRegion(id) { return document.getElementById(id); }
+  function raf(fn) { return window.requestAnimationFrame(fn); }
+
+  /* Faithful copy of the current src/announce.ts, for the baseline. */
+  var baselineTimeout = null;
+  function currentAnnounce(message, manners) {
+    var valid = (manners === 'polite' || manners === 'assertive') ? manners : 'polite';
+    var a = getRegion('announce-this');
+    function clear() { a.textContent = ''; baselineTimeout = null; return a; }
+    if (!a) {
+      a = document.createElement('div');
+      a.id = 'announce-this';
+      a.setAttribute('style', REGION_STYLE);
+      document.body.appendChild(a);
+    }
+    a.setAttribute('aria-live', 'off');
+    clear().setAttribute('aria-live', valid);
+    a.textContent = message;
+    if (baselineTimeout) clearTimeout(baselineTimeout);
+    baselineTimeout = window.setTimeout(clear, 500);
+    return a;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Part 1 — sequences, all on the current implementation.
+   * ---------------------------------------------------------------- */
+  var SEQUENCES = [
+    { id: 'seq-pp', label: 'polite → polite', deciding: true,
+      first: ['First message', 'polite'], second: ['Second message', 'polite'] },
+    { id: 'seq-pa', label: 'polite → assertive',
+      first: ['First message', 'polite'], second: ['Second message', 'assertive'] },
+    { id: 'seq-aa', label: 'assertive → assertive', deciding: true,
+      first: ['First message', 'assertive'], second: ['Second message', 'assertive'] },
+    { id: 'seq-ap', label: 'assertive → polite',
+      first: ['First message', 'assertive'], second: ['Second message', 'polite'] }
+  ];
+
+  /* ---------------------------------------------------------------- *
+   * Part 2 — candidate initializations. `sideEffectFree` records whether
+   * the strategy is compatible with the package's sideEffects:false flag,
+   * which forbids doing work at module load.
+   * ---------------------------------------------------------------- */
+  var VARIANTS = [
+    {
+      id: 'v-none', label: 'Baseline (no change)', sideEffectFree: true,
+      mech: 'create region + set aria-live + write content, all in one task',
+      run: function () { currentAnnounce('Baseline announcement', 'polite'); }
+    },
+    {
+      id: 'v-raf', label: 'Create, write next frame', sideEffectFree: true,
+      mech: 'create + aria-live now\nrequestAnimationFrame -> write content',
+      run: function () {
+        var a = makeRegion('announce-this', 'polite');
+        raf(function () { a.textContent = 'Deferred one frame'; });
+      }
+    },
+    {
+      id: 'v-raf2', label: 'Create, write after two frames', sideEffectFree: true,
+      mech: 'create + aria-live now\nrAF -> rAF -> write content',
+      run: function () {
+        var a = makeRegion('announce-this', 'polite');
+        raf(function () { raf(function () { a.textContent = 'Deferred two frames'; }); });
+      }
+    },
+    {
+      id: 'v-timeout0', label: 'Create, write next macrotask', sideEffectFree: true,
+      mech: 'create + aria-live now\nsetTimeout(0) -> write content',
+      run: function () {
+        var a = makeRegion('announce-this', 'polite');
+        setTimeout(function () { a.textContent = 'Deferred a macrotask'; }, 0);
+      }
+    },
+    {
+      id: 'v-timeout100', label: 'Create, write after 100ms', sideEffectFree: true,
+      mech: 'create + aria-live now\nsetTimeout(100) -> write content',
+      run: function () {
+        var a = makeRegion('announce-this', 'polite');
+        setTimeout(function () { a.textContent = 'Deferred 100ms'; }, 100);
+      }
+    },
+    {
+      id: 'v-eager', label: 'Empty region created at page load', sideEffectFree: false,
+      mech: 'at load: append empty <div aria-live="polite">\non click: write content immediately',
+      init: function () { makeRegion('announce-this', 'polite'); },
+      run: function () { getRegion('announce-this').textContent = 'Written into a pre-existing region'; }
+    },
+    {
+      id: 'v-eager-cycle', label: 'Created at load, aria-live cycled', sideEffectFree: false,
+      mech: 'at load: append empty region, then cycle\n  polite -> assertive -> polite over frames\non click: write content immediately',
+      init: function () {
+        var a = makeRegion('announce-this', 'polite');
+        raf(function () {
+          a.setAttribute('aria-live', 'assertive');
+          raf(function () { a.setAttribute('aria-live', 'polite'); });
+        });
+      },
+      run: function () { getRegion('announce-this').textContent = 'Written after a manner cycle'; }
+    },
+    {
+      id: 'v-eager-prime', label: 'Created at load, primed then cleared', sideEffectFree: false,
+      mech: 'at load: append region, write "\\u00a0", clear it a frame later\non click: write content immediately',
+      init: function () {
+        var a = makeRegion('announce-this', 'polite');
+        a.textContent = ' ';
+        raf(function () { raf(function () { a.textContent = ''; }); });
+      },
+      run: function () { getRegion('announce-this').textContent = 'Written after a priming write'; }
+    },
+    {
+      id: 'v-dual', label: 'Two static regions, no toggling', sideEffectFree: false,
+      mech: 'at load: append empty polite AND assertive regions\non click: write into the matching one, never change aria-live',
+      init: function () {
+        makeRegion('announce-polite', 'polite');
+        makeRegion('announce-assertive', 'assertive');
+      },
+      run: function () { getRegion('announce-polite').textContent = 'Written to a dedicated polite region'; }
+    },
+    {
+      id: 'v-dual-assertive', label: 'Two static regions, assertive first', sideEffectFree: false,
+      mech: 'same as above, but the first write goes to the assertive region',
+      init: function () {
+        makeRegion('announce-polite', 'polite');
+        makeRegion('announce-assertive', 'assertive');
+      },
+      run: function () { getRegion('announce-assertive').textContent = 'Written to a dedicated assertive region'; }
+    }
+  ];
+
+  /* ---------------------------------------------------------------- *
+   * Persistence
+   * ---------------------------------------------------------------- */
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; }
+  }
+  function save(r) {
+    try { localStorage.setItem(STORE, JSON.stringify(r)); } catch (e) { /* private mode */ }
+  }
+  var results = load();
+
+  var params = new URLSearchParams(location.search);
+  var activeId = params.get('t');
+
+  function goTo(id) { location.search = id ? '?t=' + encodeURIComponent(id) : ''; }
+
+  /* ---------------------------------------------------------------- *
+   * Tables
+   * ---------------------------------------------------------------- */
+  function verdictCell(v) {
+    var td = document.createElement('td');
+    if (v === 'yes') { td.className = 'r-pass'; td.textContent = 'yes'; }
+    else if (v === 'no') { td.className = 'r-fail'; td.textContent = 'NO'; }
+    else { td.textContent = '—'; }
+    return td;
+  }
+
+  function renderPart1() {
+    var body = document.querySelector('#t-part1 tbody');
+    body.textContent = '';
+    SEQUENCES.forEach(function (s) {
+      var r = results[s.id] || {};
+      var tr = document.createElement('tr');
+      if (s.id === activeId) tr.className = 'current';
+
+      var name = document.createElement('td');
+      name.textContent = s.label + (s.deciding ? '  ← deciding' : '');
+      tr.appendChild(name);
+      tr.appendChild(verdictCell(r.first));
+      tr.appendChild(verdictCell(r.second));
+
+      var act = document.createElement('td');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'secondary';
+      b.textContent = s.id === activeId ? 'running' : 'run';
+      b.disabled = s.id === activeId;
+      b.addEventListener('click', function () { goTo(s.id); });
+      act.appendChild(b);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderPart2() {
+    var body = document.querySelector('#t-part2 tbody');
+    body.textContent = '';
+    VARIANTS.forEach(function (v) {
+      var r = results[v.id] || {};
+      var tr = document.createElement('tr');
+      if (v.id === activeId) tr.className = 'current';
+
+      var name = document.createElement('td');
+      name.textContent = v.label;
+      tr.appendChild(name);
+
+      var se = document.createElement('td');
+      se.textContent = v.sideEffectFree ? 'yes' : 'no — work at load';
+      tr.appendChild(se);
+
+      tr.appendChild(verdictCell(r.spoke));
+
+      var act = document.createElement('td');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'secondary';
+      b.textContent = v.id === activeId ? 'running' : 'run';
+      b.disabled = v.id === activeId;
+      b.addEventListener('click', function () { goTo(v.id); });
+      act.appendChild(b);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Active test panel
+   * ---------------------------------------------------------------- */
+  function radioGroup(name, labelText, saved, onPick) {
+    var row = document.createElement('div');
+    row.className = 'vrow';
+    var q = document.createElement('span');
+    q.className = 'q';
+    q.textContent = labelText;
+    row.appendChild(q);
+    [['yes', 'Spoke'], ['no', 'Silent']].forEach(function (pair) {
+      var lab = document.createElement('label');
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = name;
+      input.value = pair[0];
+      if (saved === pair[0]) input.checked = true;
+      input.addEventListener('change', function () { onPick(pair[0]); });
+      lab.appendChild(input);
+      lab.appendChild(document.createTextNode(' ' + pair[1]));
+      row.appendChild(lab);
+    });
+    return row;
+  }
+
+  function panel(title, mech, buildSteps, buildVerdict) {
+    var box = document.createElement('div');
+    box.className = 'active-test';
+    var label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = 'Running now';
+    box.appendChild(label);
+    var h = document.createElement('h3');
+    h.textContent = title;
+    box.appendChild(h);
+    var m = document.createElement('div');
+    m.className = 'mech';
+    m.textContent = mech;
+    box.appendChild(m);
+    box.appendChild(buildSteps());
+    var fs = document.createElement('fieldset');
+    fs.className = 'verdict';
+    var lg = document.createElement('legend');
+    lg.textContent = 'What did you hear?';
+    fs.appendChild(lg);
+    buildVerdict(fs);
+    box.appendChild(fs);
+    return box;
+  }
+
+  function renderActive() {
+    var host = document.getElementById('active');
+    host.textContent = '';
+    if (!activeId) {
+      var p = document.createElement('div');
+      p.className = 'note';
+      p.innerHTML = '<strong>Pick a test above</strong>Start with the deciding sequence, ' +
+        'polite &rarr; polite. Selecting a test reloads this page so it starts from a ' +
+        'clean accessibility tree.';
+      host.appendChild(p);
+      return;
+    }
+
+    var seq = SEQUENCES.filter(function (s) { return s.id === activeId; })[0];
+    if (seq) return host.appendChild(renderSequence(seq));
+
+    var variant = VARIANTS.filter(function (v) { return v.id === activeId; })[0];
+    if (variant) return host.appendChild(renderVariant(variant));
+
+    host.textContent = 'Unknown test: ' + activeId;
+  }
+
+  function renderSequence(seq) {
+    var saved = results[seq.id] || {};
+    var mech = 'current implementation, unchanged\n1st: announce("' + seq.first[0] + '", "' +
+      seq.first[1] + '")\n2nd: announce("' + seq.second[0] + '", "' + seq.second[1] + '")';
+
+    return panel(seq.label, mech, function () {
+      var steps = document.createElement('div');
+      steps.className = 'steps';
+      var b1 = document.createElement('button');
+      b1.type = 'button';
+      b1.textContent = '1. Announce ' + seq.first[1];
+      var b2 = document.createElement('button');
+      b2.type = 'button';
+      b2.textContent = '2. Announce ' + seq.second[1];
+      b2.disabled = true;
+      b1.addEventListener('click', function () {
+        currentAnnounce(seq.first[0], seq.first[1]);
+        b1.disabled = true;
+        b2.disabled = false;
+      });
+      b2.addEventListener('click', function () {
+        currentAnnounce(seq.second[0], seq.second[1]);
+        b2.disabled = true;
+      });
+      steps.appendChild(b1);
+      steps.appendChild(b2);
+      return steps;
+    }, function (fs) {
+      fs.appendChild(radioGroup('q1', 'First announcement:', saved.first, function (v) {
+        results[seq.id] = results[seq.id] || {};
+        results[seq.id].first = v;
+        save(results); renderPart1();
+      }));
+      fs.appendChild(radioGroup('q2', 'Second announcement:', saved.second, function (v) {
+        results[seq.id] = results[seq.id] || {};
+        results[seq.id].second = v;
+        save(results); renderPart1();
+      }));
+    });
+  }
+
+  function renderVariant(variant) {
+    var saved = results[variant.id] || {};
+    // Setup that a real fix would do at module load happens here, before the
+    // tester clicks anything — that is the whole point of the variant.
+    if (variant.init) variant.init();
+
+    return panel(variant.label, variant.mech, function () {
+      var steps = document.createElement('div');
+      steps.className = 'steps';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = 'Announce once';
+      b.addEventListener('click', function () { variant.run(); b.disabled = true; });
+      steps.appendChild(b);
+      return steps;
+    }, function (fs) {
+      fs.appendChild(radioGroup('qv', 'The announcement:', saved.spoke, function (v) {
+        results[variant.id] = { spoke: v };
+        save(results); renderPart2();
+      }));
+    });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Report
+   * ---------------------------------------------------------------- */
+  function mark(v) { return v === 'yes' ? 'spoke' : v === 'no' ? '**SILENT**' : 'not run'; }
+
+  function buildReport() {
+    var out = ['## Live region initialization results', '', '_Fill in your AT / browser / OS._', ''];
+    out.push('### Part 1 — sequences on the current implementation', '');
+    out.push('| Sequence | 1st | 2nd |', '|---|---|---|');
+    SEQUENCES.forEach(function (s) {
+      var r = results[s.id] || {};
+      out.push('| ' + s.label + (s.deciding ? ' (deciding)' : '') + ' | ' +
+        mark(r.first) + ' | ' + mark(r.second) + ' |');
+    });
+
+    // A speaking polite → polite settles it on its own; only the silent case
+    // needs a same-vs-different comparison to interpret.
+    var pp = results['seq-pp'] || {};
+    var pa = results['seq-pa'] || {};
+    if (pp.second === 'yes') {
+      out.push('', '**Reading:** polite → polite speaks on the 2nd, so the cause is ' +
+        'ordinality — the region must be registered before any content write. Fix by ' +
+        'getting an empty region in place first; no aria-live trickery needed.');
+    } else if (pp.second === 'no' && pa.second === 'yes') {
+      out.push('', '**Reading:** polite → polite stays silent while polite → assertive ' +
+        'speaks, so the aria-live change is what re-registers the region. This is worse ' +
+        'than issue #15 describes: consecutive same-manner announcements fail. Two static ' +
+        'regions with no toggling is the likely fix.');
+    } else if (pp.second === 'no' && pa.second === 'no') {
+      out.push('', '**Reading:** neither second announcement spoke — something outside ' +
+        'these two hypotheses is going on.');
+    } else if (pp.second === 'no') {
+      out.push('', '**Reading:** polite → polite stayed silent on the 2nd. Run ' +
+        'polite → assertive next to tell an aria-live problem from something broader.');
+    }
+
+    out.push('', '### Part 2 — initialization strategies', '');
+    out.push('| Variant | sideEffects:false safe | First announcement |', '|---|---|---|');
+    VARIANTS.forEach(function (v) {
+      var r = results[v.id] || {};
+      out.push('| ' + v.label + ' | ' + (v.sideEffectFree ? 'yes' : 'no') + ' | ' + mark(r.spoke) + ' |');
+    });
+
+    var winners = VARIANTS.filter(function (v) {
+      return (results[v.id] || {}).spoke === 'yes';
+    });
+    if (winners.length) {
+      out.push('', '**Works:** ' + winners.map(function (v) { return v.label; }).join(', '));
+      var free = winners.filter(function (v) { return v.sideEffectFree; });
+      out.push(free.length
+        ? '**Cheapest fix that keeps `sideEffects: false`:** ' + free[0].label
+        : '_Every working variant needs work at module load, so `sideEffects: false` ' +
+          'would have to be dropped or the setup moved behind an explicit init call._');
+    }
+    return out.join('\n');
+  }
+
+  document.getElementById('btn-report').addEventListener('click', function () {
+    var ta = document.getElementById('report');
+    ta.value = buildReport();
+    ta.hidden = false;
+    ta.focus();
+  });
+  document.getElementById('btn-copy').addEventListener('click', function () {
+    var ta = document.getElementById('report');
+    if (ta.hidden) { ta.value = buildReport(); ta.hidden = false; }
+    if (navigator.clipboard) navigator.clipboard.writeText(ta.value)['catch'](function () { ta.select(); });
+    else ta.select();
+  });
+  document.getElementById('btn-reset').addEventListener('click', function () {
+    results = {};
+    save(results);
+    goTo(null);
+  });
+
+  renderPart1();
+  renderPart2();
+  renderActive();
+})();
+</script>
+</body>
+</html>

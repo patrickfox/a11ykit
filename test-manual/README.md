@@ -72,6 +72,42 @@ and never announces its own state changes, so anything you hear comes from
 A11yKit rather than the page around it. `tests/harness-sync.test.ts` enforces
 this; please keep it true when adding cases.
 
+## The live region initialization rig
+
+`announce-init.html` is a separate, focused rig for one question: why the first
+`announce()` of a page session is silent, and which fix works on real assistive
+technology.
+
+It exists because the reports so far are ambiguous in a way that changes the
+fix. Every observed success involved a **manner change** — polite → assertive,
+or assertive → polite. Two explanations fit:
+
+- **Ordinality.** The region must be in the accessibility tree before any
+  content write. Predicts the second announcement speaks in *every* sequence,
+  including polite → polite.
+- **The `aria-live` change.** Each call sets `aria-live` to `off` and back, so
+  same-manner is `polite → off → polite`, which nets to no change once the AT
+  coalesces the task. Predicts same-manner sequences fail on the second call
+  too — a worse bug than issue #15 describes, since consecutive same-manner
+  announcements are the common case.
+
+**Part 1** runs four sequences against the unchanged implementation.
+polite → polite is the deciding one.
+
+**Part 2** tests candidate fixes: deferring the content write by a frame, two
+frames, or a macrotask; creating the region empty at load; cycling `aria-live`
+during init; priming the region and clearing it; and two static regions with no
+toggling at all. Each variant is marked for whether it is compatible with
+`sideEffects: false`, since anything done at module load is not.
+
+Each test needs a page with no live region on it, so selecting one reloads the
+page. Run it, record what you heard, pick the next. The generated report reads
+the result back for you and names the cheapest fix that works.
+
+This page deliberately does not import the library — each variant is
+implemented inline, because the point is to choose an implementation before
+changing `src/announce.ts`.
+
 ## Expected failures
 
 One case is expected to fail today: *content added after hiding stays in the tab

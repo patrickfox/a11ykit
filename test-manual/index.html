@@ -108,6 +108,13 @@
 </div>
 
 <div class="note">
+  <strong>Investigating the dropped first announcement?</strong>
+  The <a href="./announce-init.html">live region initialization rig</a> isolates that one
+  question — why the first <code>announce()</code> is silent, and which fix works on your
+  screen reader. Use it instead of this page for that.
+</div>
+
+<div class="note">
   <strong>Before you start</strong>
   This harness is deliberately silent: it has no live regions of its own, so anything
   you hear comes from A11yKit. Turn your screen reader on now, fill in the environment
@@ -162,7 +169,7 @@ const CASES = [
     hear: '“First announcement after load”',
     not: 'Silence. A dropped first announcement is the bug — every later call working is exactly the symptom.',
     note: 'The live region is created on first use. Several screen readers ignore mutations to a region that was not already in the accessibility tree, so this can only be tested once per load. Reload the page to run it again.',
-    actions: [{ label: 'Announce', run: () => announce('First announcement after load') }]
+    actions: [{ label: 'Announce', run: () => announce('First announcement after load','polite') }]
   },
   {
     id: 'announce-polite',
@@ -172,7 +179,7 @@ const CASES = [
     do: 'Start reading this paragraph with your screen reader, then click “Announce polite” while it is still speaking.',
     hear: 'The current sentence finishes first, then “Settings saved”.',
     not: 'The message cutting off what was being read.',
-    actions: [{ label: 'Announce polite', run: () => announce('Settings saved') }]
+    actions: [{ label: 'Announce polite', run: () => announce('Settings saved','polite') }]
   },
   {
     id: 'announce-assertive',
