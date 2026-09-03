@@ -40,6 +40,46 @@ npm install @a11yfox/a11ykit
 import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from '@a11yfox/a11ykit';
 ```
 
+### No build step
+
+A11yKit has no dependencies, so both builds run directly from a CDN in a plain
+HTML page with no tooling at all.
+
+```html
+<!-- ES module -->
+<script type="module">
+  import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
+    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.0.6/dist/a11ykit.esm.js';
+
+  announce('Settings saved');
+</script>
+```
+
+```html
+<!-- UMD global, for classic scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.0.6/dist/a11ykit.umd.min.js"></script>
+<script>
+  A11yKit.announce('Settings saved');
+</script>
+```
+
+The UMD build exposes everything on a global named `A11yKit`.
+
+To share one pinned URL across several modules, use an import map:
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.0.6/dist/a11ykit.esm.js"
+  }
+}
+</script>
+<script type="module">
+  import { announce } from '@a11yfox/a11ykit';
+</script>
+```
+
 ## API Reference
 
 ### `access(element, placeFocusBefore?)`
@@ -48,7 +88,11 @@ Dynamically place focus on any element without hardcoded tabindex attributes.
 
 **Parameters:**
 - `element: HTMLElement` - The element to receive focus
-- `placeFocusBefore?: string` - Optional. If `true`, creates a visually hidden span before the element and places focus on that element instead. If a string, uses that as the span's content.
+- `placeFocusBefore?: string` - Optional. When provided, creates a visually hidden span before the element, uses the string as its text content, and places focus there instead of on the element itself.
+
+  The parameter is currently typed `string | boolean`. Passing `true` inserts an *empty* hidden span, which announces nothing — pass the message you want read instead. The `boolean` half of the type is deprecated and will be removed in a future release.
+
+  The message is inserted as text, not markup.
 
 **Behavior:**
 - Places focus on the target element
@@ -90,7 +134,7 @@ Certain scenarios merit focus management:
 Announce any message to screen readers users
 
 **Parameters:**
-- `message: string` - The message to announce
+- `message: string` - The message to announce. Inserted as text, so markup in the string is read literally rather than rendered — safe to pass user- or server-supplied content.
 - `manners?: 'polite' | 'assertive'` - Announcement priority (default: 'polite')
 
 **Returns:** `HTMLElement` - The announcer element
@@ -149,11 +193,41 @@ ariaHide(sidebar);
 // Show sidebar when modal closes  
 ariaUnhide(sidebar);
 
-// Hide everything (common for modals)
-ariaHide(document.body);
-// Don't forget to unhide when modal closes
-ariaUnhide(document.body);
 ```
+
+**Hiding the page behind a modal**
+
+Hide the content *beside* the dialog, not a common ancestor of both. Calling
+`ariaHide(document.body)` hides the dialog along with everything else, which is
+the opposite of the intent. Current versions of Chrome also refuse to apply
+`aria-hidden` to an element containing the focused element, and log a console
+warning, so the pattern misbehaves as soon as focus moves into the dialog.
+
+```html
+<body>
+  <div id="app"><!-- page content --></div>
+  <div id="modal-root"><!-- dialog renders here --></div>
+</body>
+```
+
+```typescript
+// Open
+ariaHide(document.querySelector('#app')!);
+
+// Close
+ariaUnhide(document.querySelector('#app')!);
+```
+
+**When not to reach for `ariaHide()`**
+
+For most modal dialogs in 2026, `<dialog>.showModal()` is the better answer: the
+browser makes the rest of the page inert for you, with no bookkeeping and no
+attribute to remember to remove. Reach for `ariaHide()` when you need to hide a
+region that isn't a modal, or when you can't use a native dialog.
+
+Note also that `ariaHide()` takes a one-time snapshot of the focusable elements
+in the subtree. Anything rendered into that subtree afterwards stays in the tab
+order, and elements inside shadow roots are not traversed.
 
 **Why use `ariaHide()`/`ariaUnhide()`?**
 Properly managing ARIA states and focus trapping requires careful coordination of multiple attributes. These functions handle the complexity automatically and reversibly.

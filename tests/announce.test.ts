@@ -74,11 +74,19 @@ describe('announce function', () => {
       expect(announcer.innerHTML).toBe('Second message');
     });
 
-    test('handles HTML in messages', () => {
+    test('treats markup in messages as literal text', () => {
       const htmlMessage = '<strong>Error:</strong> Please try again.';
       const announcer = announce(htmlMessage);
-      
-      expect(announcer.innerHTML).toBe(htmlMessage);
+
+      expect(announcer.textContent).toBe(htmlMessage);
+      expect(announcer.children.length).toBe(0);
+    });
+
+    test('does not execute markup passed as a message', () => {
+      const announcer = announce('<img src=x onerror="window.__xss = true">');
+
+      expect(announcer.querySelector('img')).toBeNull();
+      expect((window as any).__xss).toBeUndefined();
     });
 
     test('handles empty messages', () => {

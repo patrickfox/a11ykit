@@ -12,7 +12,7 @@ export const announce = (message: string, manners?: string): HTMLElement => {
   let announcer = document.getElementById('announce-this') as HTMLElement;
 
   const clearAnnouncer = (): HTMLElement => {
-    announcer.innerHTML = '';
+    announcer.textContent = '';
     announceTimeout = null;
     return announcer;
   };
@@ -26,7 +26,7 @@ export const announce = (message: string, manners?: string): HTMLElement => {
 
   announcer.setAttribute('aria-live', 'off');
   clearAnnouncer().setAttribute('aria-live', validManners);
-  announcer.innerHTML = message;
+  announcer.textContent = message;
   
   if (announceTimeout) {
     clearTimeout(announceTimeout);

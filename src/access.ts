@@ -28,7 +28,7 @@ export const access = (el: HTMLElement, placeFocusBefore?: string | boolean): vo
   if (placeFocusBefore) {
     tempEl = document.createElement('span');
     if (typeof placeFocusBefore === 'string') {
-      tempEl.innerHTML = placeFocusBefore;
+      tempEl.textContent = placeFocusBefore;
     }
     tempEl.setAttribute('style', 'position: absolute;height: 1px;width: 1px;margin: -1px;padding: 0;overflow: hidden;clip: rect(0 0 0 0);border: 0;');
     if (el.parentNode) {

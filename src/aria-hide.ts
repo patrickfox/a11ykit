@@ -3,7 +3,10 @@ import { setTemporaryTabindex, restoreOriginalTabindex, hasStoredTabindex } from
 export const ariaHide = (parent?: HTMLElement): void => {
   const targetParent = parent || document.body;
 
-  const hasHiddenParent = targetParent.parentElement?.closest('[aria-hidden="true"]') !== null;
+  // An element with no parent cannot have a hidden ancestor. Comparing with
+  // `!== null` treated the `undefined` from optional chaining as a match and
+  // skipped the tabindex work entirely for detached elements.
+  const hasHiddenParent = Boolean(targetParent.parentElement?.closest('[aria-hidden="true"]'));
 
   targetParent.setAttribute('aria-hidden', 'true');
 
