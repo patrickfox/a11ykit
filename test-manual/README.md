@@ -38,6 +38,42 @@ page load, so a reload you did not ask for would silently invalidate it — and 
 unexpected reload is disruptive when a screen reader is mid-sentence. After
 changing the library, run `npm run build:only` and reload the page yourself.
 
+## Testing from a VM or a second machine
+
+Cross-screen-reader testing usually means Windows for NVDA and JAWS, so the
+server binds all interfaces by default. The startup banner prints the address
+to use:
+
+```
+  From another device or VM on this network:
+
+    http://192.168.1.209:8080/test-manual/
+```
+
+`localhost` will not work from the VM — there it means the VM itself. Use the
+host machine's LAN address, as printed.
+
+- **Parallels, VMware, UTM** (shared or bridged networking): the LAN address
+  above works as-is.
+- **VirtualBox with NAT**: the host is reachable at `10.0.2.2` instead, so use
+  `http://10.0.2.2:8080/test-manual/`.
+- macOS may ask whether `node` should accept incoming connections the first
+  time. It has to be allowed, or the VM cannot connect.
+
+To keep the server on this machine only:
+
+```bash
+npm run test:manual -- --host 127.0.0.1
+```
+
+**Results are stored per origin.** `http://localhost:8080` and
+`http://192.168.1.209:8080` are different origins, so each keeps its own
+verdicts and environment fields — even in the same browser on the same machine.
+That is usually what you want, since a VM run is a different environment
+anyway, but it does mean switching between the two URLs on one machine will
+appear to lose your results. They are not gone; they belong to the other origin.
+Generate and copy the report before switching.
+
 ## How it works
 
 The harness imports `../dist/a11ykit.esm.js`, the artifact that actually ships.

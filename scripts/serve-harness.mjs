@@ -12,7 +12,10 @@
  * invalidate it, and an unexpected reload mid-run is disruptive when a screen
  * reader is reading the page.
  *
- * Usage: node scripts/serve-harness.mjs [--port 8080] [--no-open]
+ * Usage: node scripts/serve-harness.mjs [--port 8080] [--no-open] [--host 127.0.0.1]
+ *
+ * Binds all interfaces by default so a VM or a second machine can reach the
+ * harness — cross-screen-reader testing generally needs one. --host restricts it.
  */
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -20,6 +23,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve, extname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { networkInterfaces } from 'node:os';
 
 const ROOT = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const ENTRY = '/test-manual/';
@@ -33,6 +37,16 @@ const value = (name, fallback) => {
 
 const startPort = Number(value('port', process.env.PORT || 8080));
 const shouldOpen = !flag('no-open');
+// Node binds every interface when host is omitted, which is what lets a VM or
+// a second device reach the harness. --host 127.0.0.1 restricts it to this
+// machine for anyone who would rather not expose it to the local network.
+const host = value('host', null);
+
+const lanAddresses = () =>
+  Object.values(networkInterfaces())
+    .flat()
+    .filter((n) => n && n.family === 'IPv4' && !n.internal)
+    .map((n) => n.address);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -132,12 +146,23 @@ const openBrowser = (url) => {
 server.once('listening', () => {
   const { port } = server.address();
   const url = `http://localhost:${port}${ENTRY}`;
+
+  // Testing across screen readers usually means a second machine or a VM, and
+  // localhost there points at that machine, not this one.
+  const lan = host ? [] : lanAddresses();
+  const lanLines = lan.length
+    ? `\n  From another device or VM on this network:\n\n` +
+      lan.map((ip) => `    http://${ip}:${port}${ENTRY}`).join('\n') +
+      `\n\n  (macOS may ask whether node should accept incoming connections.\n` +
+      `   VirtualBox NAT instead reaches this host at 10.0.2.2.)\n`
+    : '';
+
   console.log(`
   A11yKit screen reader harness
 
     ${url}
     ${url}announce-init.html   (live region initialization rig)
-
+${lanLines}
   Turn your screen reader on before you start, and work top to bottom —
   the first case is only valid on a fresh page load.
 
@@ -160,7 +185,8 @@ const listen = (port, attemptsLeft = 10) => {
     console.error(`\n  Could not start the server: ${err.message}\n`);
     process.exit(1);
   });
-  server.listen(port);
+  if (host) server.listen(port, host);
+  else server.listen(port);
 };
 
 if (!existsSync(join(ROOT, 'dist/a11ykit.esm.js'))) {

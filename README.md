@@ -336,6 +336,10 @@ genuinely unreachable — is covered by a manual harness:
 npm run test:manual   # builds, serves, and opens the harness
 ```
 
+The server binds all interfaces so a Windows VM or a second machine can reach
+it for NVDA and JAWS testing; the banner prints the address. Use
+`-- --host 127.0.0.1` to keep it local.
+
 Each case states what to do, what you should hear, and what specifically counts
 as a failure, and the results export as a markdown table. See
 [`test-manual/README.md`](test-manual/README.md).
