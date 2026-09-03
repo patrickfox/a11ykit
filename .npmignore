@@ -2,6 +2,7 @@
 src/
 tests/
 test-manual/
+scripts/
 
 # Config files
 tsconfig.json

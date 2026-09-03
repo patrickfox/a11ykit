@@ -11,11 +11,32 @@ whether hidden content is genuinely unreachable. This page covers that gap.
 npm run test:manual
 ```
 
-That builds the bundle and serves the repo root. Open:
+That builds the bundle, starts a server, and opens the page. If you have
+already built and just want the server back:
 
-<http://localhost:8080/test-manual/>
+```bash
+npm run test:manual:serve
+```
 
-The page must be served over HTTP — ES modules do not load from `file://`.
+Options pass through after `--`:
+
+```bash
+npm run test:manual -- --port 3000   # start from a different port
+npm run test:manual -- --no-open     # don't open a browser
+```
+
+The page must be served over HTTP — ES modules do not load from `file://`, so
+opening the file directly will not work.
+
+The server is a dependency-free Node script (`scripts/serve-harness.mjs`). It
+picks the next free port if yours is taken, serves only `test-manual/`, `dist/`
+and `package.json`, and sends `no-store` so a rebuild is never masked by a
+cached module.
+
+**It does not auto-reload, on purpose.** The first case depends on a controlled
+page load, so a reload you did not ask for would silently invalidate it — and an
+unexpected reload is disruptive when a screen reader is mid-sentence. After
+changing the library, run `npm run build:only` and reload the page yourself.
 
 ## How it works
 

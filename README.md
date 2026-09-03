@@ -333,7 +333,7 @@ session is spoken, whether `polite` waits its turn, whether hidden content is
 genuinely unreachable — is covered by a manual harness:
 
 ```bash
-npm run test:manual   # builds, then serves at http://localhost:8080/test-manual/
+npm run test:manual   # builds, serves, and opens the harness
 ```
 
 Each case states what to do, what you should hear, and what specifically counts
@@ -350,6 +350,9 @@ src/
 ├── prefers-reduced-motion.ts # Motion preference detection
 ├── tabindex-utils.ts      # Shared tabindex bookkeeping
 └── index.ts               # Main exports
+
+scripts/
+└── serve-harness.mjs      # Dependency-free server for the manual harness
 
 tests/
 ├── access.test.ts         # Focus management tests
