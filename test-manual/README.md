@@ -96,7 +96,15 @@ or assertive → polite. Two explanations fit:
 **Part 1** runs four sequences against the unchanged implementation.
 polite → polite is the deciding one.
 
-**Part 2** tests candidate fixes: deferring the content write by a frame, two
+**Part 2** tests candidate fixes. The last variant, *Proposed fix — two calls in
+one task*, is the actual shape of the intended change rather than an isolated
+timing probe: lazy creation, a macrotask before the first write, and a one-slot
+queue. It makes two `announce()` calls in the same task, before the region has
+registered, and asks which message you heard. Hearing the **first** one means
+the queue replayed a stale message — an ordering bug — which is why it offers a
+three-way verdict instead of spoke/silent.
+
+The rest of Part 2 tests: deferring the content write by a frame, two
 frames, or a macrotask; creating the region empty at load; cycling `aria-live`
 during init; priming the region and clearing it; and two static regions with no
 toggling at all. Each variant is marked for whether it is compatible with

@@ -213,6 +213,46 @@ aria-live change the AT re-registers when aria-live changes value.
     return a;
   }
 
+  /* The exact shape of the proposed fix: lazy creation, a macrotask before the
+   * first write, and a one-slot queue so calls made before the region registers
+   * collapse to the most recent message rather than replaying a stale one. */
+  var pClear = null, pReady = null, pPending = null, pRegistered = null;
+
+  function proposedWrite(el, message, manners) {
+    el.setAttribute('aria-live', 'off');
+    el.textContent = '';
+    el.setAttribute('aria-live', manners);
+    el.textContent = message;
+    if (pClear) clearTimeout(pClear);
+    pClear = window.setTimeout(function () { el.textContent = ''; pClear = null; }, 500);
+  }
+
+  function proposedAnnounce(message, manners) {
+    var valid = (manners === 'polite' || manners === 'assertive') ? manners : 'polite';
+    var el = getRegion('announce-this');
+    if (!el) {
+      el = makeRegion('announce-this', valid);
+      pRegistered = null;
+    }
+    if (pRegistered === el) {
+      proposedWrite(el, message, valid);
+      return el;
+    }
+    pPending = { message: message, manners: valid };
+    if (pReady === null) {
+      pReady = window.setTimeout(function () {
+        pReady = null;
+        var node = getRegion('announce-this');
+        var queued = pPending;
+        pPending = null;
+        if (!node || !queued) return;
+        pRegistered = node;
+        proposedWrite(node, queued.message, queued.manners);
+      }, 0);
+    }
+    return el;
+  }
+
   /* ---------------------------------------------------------------- *
    * Part 1 — sequences, all on the current implementation.
    * ---------------------------------------------------------------- */
@@ -308,6 +348,15 @@ aria-live change the AT re-registers when aria-live changes value.
       run: function () { getRegion('announce-polite').textContent = 'Written to a dedicated polite region'; }
     },
     {
+      id: 'v-proposed', label: 'Proposed fix — two calls in one task', sideEffectFree: true,
+      mech: 'lazy create + macrotask deferral + one-slot queue\non click, both in the SAME task and before the region registers:\n  announce("First message")\n  announce("Second message")',
+      options: [['second', 'Heard "Second message"'], ['first', 'Heard "First message"'], ['no', 'Silent']],
+      run: function () {
+        proposedAnnounce('First message', 'polite');
+        proposedAnnounce('Second message', 'polite');
+      }
+    },
+    {
       id: 'v-dual-assertive', label: 'Two static regions, assertive first', sideEffectFree: false,
       mech: 'same as above, but the first write goes to the assertive region',
       init: function () {
@@ -351,7 +400,8 @@ aria-live change the AT re-registers when aria-live changes value.
    * ---------------------------------------------------------------- */
   function verdictCell(v) {
     var td = document.createElement('td');
-    if (v === 'yes') { td.className = 'r-pass'; td.textContent = 'yes'; }
+    if (v === 'yes' || v === 'second') { td.className = 'r-pass'; td.textContent = 'yes'; }
+    else if (v === 'first') { td.className = 'r-fail'; td.textContent = 'WRONG MESSAGE'; }
     else if (v === 'no') { td.className = 'r-fail'; td.textContent = 'NO'; }
     else { td.textContent = '—'; }
     return td;
@@ -418,14 +468,14 @@ aria-live change the AT re-registers when aria-live changes value.
   /* ---------------------------------------------------------------- *
    * Active test panel
    * ---------------------------------------------------------------- */
-  function radioGroup(name, labelText, saved, onPick) {
+  function radioGroup(name, labelText, saved, onPick, options) {
     var row = document.createElement('div');
     row.className = 'vrow';
     var q = document.createElement('span');
     q.className = 'q';
     q.textContent = labelText;
     row.appendChild(q);
-    [['yes', 'Spoke'], ['no', 'Silent']].forEach(function (pair) {
+    (options || [['yes', 'Spoke'], ['no', 'Silent']]).forEach(function (pair) {
       var lab = document.createElement('label');
       var input = document.createElement('input');
       input.type = 'radio';
@@ -547,14 +597,19 @@ aria-live change the AT re-registers when aria-live changes value.
       fs.appendChild(radioGroup('qv', 'The announcement:', saved.spoke, function (v) {
         results[variant.id] = { spoke: v };
         save(results); renderPart2();
-      }));
+      }, variant.options));
     });
   }
 
   /* ---------------------------------------------------------------- *
    * Report
    * ---------------------------------------------------------------- */
-  function mark(v) { return v === 'yes' ? 'spoke' : v === 'no' ? '**SILENT**' : 'not run'; }
+  function mark(v) {
+    if (v === 'yes' || v === 'second') return 'spoke';
+    if (v === 'first') return '**WRONG MESSAGE** (stale, queue bug)';
+    if (v === 'no') return '**SILENT**';
+    return 'not run';
+  }
 
   function buildReport() {
     var out = [
@@ -605,7 +660,8 @@ aria-live change the AT re-registers when aria-live changes value.
     });
 
     var winners = VARIANTS.filter(function (v) {
-      return (results[v.id] || {}).spoke === 'yes';
+      var r = (results[v.id] || {}).spoke;
+      return r === 'yes' || r === 'second';
     });
     if (winners.length) {
       out.push('', '**Works:** ' + winners.map(function (v) { return v.label; }).join(', '));
