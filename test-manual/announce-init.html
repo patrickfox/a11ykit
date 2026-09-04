@@ -248,7 +248,7 @@ aria-live change the AT re-registers when aria-live changes value.
         if (!node || !queued) return;
         pRegistered = node;
         proposedWrite(node, queued.message, queued.manners);
-      }, 0);
+      }, 100);
     }
     return el;
   }
@@ -348,8 +348,8 @@ aria-live change the AT re-registers when aria-live changes value.
       run: function () { getRegion('announce-polite').textContent = 'Written to a dedicated polite region'; }
     },
     {
-      id: 'v-proposed', label: 'Proposed fix — two calls in one task', sideEffectFree: true,
-      mech: 'lazy create + macrotask deferral + one-slot queue\non click, both in the SAME task and before the region registers:\n  announce("First message")\n  announce("Second message")',
+      id: 'v-proposed', label: 'Shipped fix — two calls in one task', sideEffectFree: true,
+      mech: 'lazy create + 100ms deferral + one-slot queue\n(this is the shipped implementation)\non click, both in the SAME task and before the region registers:\n  announce("First message")\n  announce("Second message")',
       options: [['second', 'Heard "Second message"'], ['first', 'Heard "First message"'], ['no', 'Silent']],
       run: function () {
         proposedAnnounce('First message', 'polite');

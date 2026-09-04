@@ -143,6 +143,11 @@ Announce any message to screen readers users
 - Creates or reuses a single `#announce-this` element
 - Temporarily sets `aria-live="off"` then back to specified value for reliable announcements
 - Automatically clears announcements after 500ms
+- Delays the **first** announcement of a page session by 100ms, so the live
+  region is registered in the accessibility tree before it is written to.
+  Without that wait the first announcement is silently dropped. Every later
+  call writes immediately. If several announcements are made before the region
+  registers, the most recent one is spoken.
 - Cancels previous announcements when new ones are made
 
 **Example:**
@@ -318,7 +323,7 @@ npm run test:ci
 ```
 
 The test suite includes:
-- **93 tests** covering all functions
+- **103 tests** covering all functions
 - **DOM manipulation testing** with jsdom
 - **Focus management and event handling**
 - **Accessibility-specific assertions**

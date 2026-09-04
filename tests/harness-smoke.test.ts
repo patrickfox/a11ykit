@@ -93,11 +93,18 @@ describeIfBuilt('manual harness runs against the built bundle', () => {
     expect(doc.getElementById('announce-this')).toBeNull();
   });
 
-  test('announce case populates the live region with literal text', () => {
+  test('announce case populates the live region with literal text', async () => {
+    // The first announcement is deferred so the region can register in the
+    // accessibility tree; see REGISTRATION_DELAY in src/announce.ts. Real
+    // timers here, so wait it out rather than assert synchronously.
     button('announce-first', 'Announce').click();
     const region = doc.getElementById('announce-this')!;
+    expect(region.textContent).toBe('');
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
     expect(region.textContent).toBe('First announcement after load');
 
+    // Registered now, so this one writes immediately.
     button('announce-escaping', 'Announce markup').click();
     expect(region.querySelector('strong')).toBeNull();
     expect(region.textContent).toBe('<strong>Saved</strong>');

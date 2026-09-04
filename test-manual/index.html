@@ -168,7 +168,7 @@ const CASES = [
     do: 'Click “Announce” below. This must be the first announcement made on this page load.',
     hear: '“First announcement after load”',
     not: 'Silence. A dropped first announcement is the bug — every later call working is exactly the symptom.',
-    note: 'The live region is created on first use. Several screen readers ignore mutations to a region that was not already in the accessibility tree, so this can only be tested once per load. Reload the page to run it again.',
+    note: 'The live region is created on first use, and screen readers ignore mutations to a region that was not already in the accessibility tree — so announce() now waits 100ms before its first write. Expect a brief pause before this one speaks; later announcements are immediate. Testable only once per load; reload to run it again.',
     actions: [{ label: 'Announce', run: () => announce('First announcement after load','polite') }]
   },
   {
