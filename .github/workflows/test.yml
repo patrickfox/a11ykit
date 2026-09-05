@@ -1,0 +1,56 @@
+name: Tests
+
+# Nothing ran the test suite on a pull request before this. The only PR check
+# was the Claude review, and tests did not run until a release was cut — at
+# which point a failure blocks publishing instead of blocking the merge.
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+# A new push to a PR makes the in-flight run redundant.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # The suite runs in about a second, so covering the supported range
+        # costs almost nothing and catches engine-specific breakage early.
+        node-version: ['20', '22', '24']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm run test:ci
+
+      - name: Build
+        run: npm run build:only
+
+      # dist/ only exists after the build, so the harness smoke suite skips on
+      # the run above. Running it again here exercises the built bundle, which
+      # is what consumers actually receive.
+      - name: Test the built bundle
+        run: npx jest tests/harness-smoke.test.ts
+
+      - name: Verify the package contents
+        run: npm pack --dry-run
