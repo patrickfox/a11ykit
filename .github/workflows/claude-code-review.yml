@@ -36,6 +36,18 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Automation mode (which is what supplying a prompt selects) posts no
+          # tracking comment by default. That means a run which errors before
+          # producing a review leaves nothing on the PR at all — the only
+          # evidence is in the Actions log, so a broken review looks the same as
+          # one that had no feedback. This surfaces it on the PR itself.
+          track_progress: true
+
+          # The workflow re-runs on every push to a PR, so without this each
+          # push would leave another comment. One comment, updated in place.
+          use_sticky_comment: true
+
           prompt: |
             Please review this pull request and provide feedback on:
             - Code quality and best practices
