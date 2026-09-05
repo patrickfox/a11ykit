@@ -45,8 +45,9 @@ import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion, watchRedu
 A11yKit has no dependencies, so both builds run directly from a CDN in a plain
 HTML page with no tooling at all.
 
+#### ES module
+
 ```html
-<!-- ES module -->
 <script type="module">
   import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
     from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js';
@@ -55,17 +56,8 @@ HTML page with no tooling at all.
 </script>
 ```
 
-```html
-<!-- UMD global, for classic scripts -->
-<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.umd.min.js"></script>
-<script>
-  A11yKit.announce('Settings saved');
-</script>
-```
-
-The UMD build exposes everything on a global named `A11yKit`.
-
-To share one pinned URL across several modules, use an import map:
+Repeating that URL in every module gets unwieldy, and changing the pinned
+version means editing each one. An import map lets you declare it once:
 
 ```html
 <script type="importmap">
@@ -75,10 +67,30 @@ To share one pinned URL across several modules, use an import map:
   }
 }
 </script>
+
 <script type="module">
   import { announce } from '@a11yfox/a11ykit';
 </script>
 ```
+
+Import maps apply to ES modules only — they resolve bare specifiers for
+`import` statements, so they have no effect on the UMD build below, which
+loads as a classic script. The import map must also appear before the first
+module that relies on it.
+
+#### UMD global
+
+For classic scripts, inline handlers, or anywhere `type="module"` is not an
+option:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.umd.min.js"></script>
+<script>
+  A11yKit.announce('Settings saved');
+</script>
+```
+
+The UMD build exposes everything on a global named `A11yKit`.
 
 ## API Reference
 
