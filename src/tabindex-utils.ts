@@ -12,12 +12,17 @@ export const getTabindex = (element: HTMLElement): string | null => {
 };
 
 /**
- * Stores the original tabindex value and sets a temporary one
- * Used by access.ts - only stores data-ogti if there was an original tabindex
+ * Stores the original tabindex value and sets a temporary one.
+ *
+ * The backup is write-once: if a previous call already stored a value, it is
+ * left alone so that nested or repeated calls cannot overwrite the true
+ * original with a temporary one. This keeps inner calls idempotent and lets
+ * the outermost restore put back the value the element started with.
  */
 export const setTemporaryTabindex = (element: HTMLElement, temporaryValue: string): void => {
-  const originalTabindex = getTabindex(element);
-  element.setAttribute(OGTI_ATTR, originalTabindex||'');
+  if (!hasStoredTabindex(element)) {
+    element.setAttribute(OGTI_ATTR, getTabindex(element) || '');
+  }
   element.setAttribute('tabindex', temporaryValue);
 };
 

@@ -25,7 +25,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist/types',
-        target: 'es2018',
+        target: 'es2020',
         module: 'esnext'
       }),
       production && !debugBuild && terser()

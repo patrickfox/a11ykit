@@ -1,11 +1,13 @@
 # Source files
 src/
 tests/
+test-manual/
+scripts/
 
 # Config files
 tsconfig.json
 jest.config.js
-rollup.config.js
+rollup.config.mjs
 
 # Development files
 .git/

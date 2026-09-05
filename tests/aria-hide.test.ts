@@ -317,4 +317,99 @@ describe('aria-hide functions', () => {
       expect(() => ariaUnhide(container)).not.toThrow();
     });
   });
+
+  describe('detached elements', () => {
+    test('still updates focusable children when the element has no parent', () => {
+      const container = document.createElement('div');
+      const button = document.createElement('button');
+      container.appendChild(button);
+
+      ariaHide(container);
+
+      expect(container.getAttribute('aria-hidden')).toBe('true');
+      expect(button.getAttribute('tabindex')).toBe('-1');
+      expect(button.getAttribute('data-ogti')).toBe('');
+    });
+
+    test('restores focusable children of a detached element', () => {
+      const container = document.createElement('div');
+      const link = document.createElement('a');
+      link.setAttribute('href', '/x');
+      link.setAttribute('tabindex', '0');
+      container.appendChild(link);
+
+      ariaHide(container);
+      expect(link.getAttribute('tabindex')).toBe('-1');
+
+      ariaUnhide(container);
+
+      expect(link.getAttribute('tabindex')).toBe('0');
+      expect(link.hasAttribute('data-ogti')).toBe(false);
+    });
+  });
+
+  describe('nested and repeated hides', () => {
+    test('a second hide does not overwrite the original tabindex backup', () => {
+      const sidebar = document.createElement('div');
+      const link = document.createElement('a');
+      link.setAttribute('href', '/x');
+      sidebar.appendChild(link);
+      document.body.appendChild(sidebar);
+
+      ariaHide(sidebar);
+      expect(link.getAttribute('data-ogti')).toBe('');
+      expect(link.getAttribute('tabindex')).toBe('-1');
+
+      ariaHide(document.body);
+      // The backup must still describe the element's true original state,
+      // not the temporary -1 written by the first call.
+      expect(link.getAttribute('data-ogti')).toBe('');
+    });
+
+    test('outermost unhide restores the true original tabindex', () => {
+      const sidebar = document.createElement('div');
+      const link = document.createElement('a');
+      link.setAttribute('href', '/x');
+      sidebar.appendChild(link);
+      document.body.appendChild(sidebar);
+
+      ariaHide(sidebar);
+      ariaHide(document.body);
+      ariaUnhide(document.body);
+
+      expect(link.hasAttribute('tabindex')).toBe(false);
+      expect(link.hasAttribute('data-ogti')).toBe(false);
+    });
+
+    test('preserves an explicit tabindex across nested hides', () => {
+      const sidebar = document.createElement('div');
+      const link = document.createElement('a');
+      link.setAttribute('href', '/x');
+      link.setAttribute('tabindex', '0');
+      sidebar.appendChild(link);
+      document.body.appendChild(sidebar);
+
+      ariaHide(sidebar);
+      ariaHide(document.body);
+      ariaUnhide(document.body);
+
+      expect(link.getAttribute('tabindex')).toBe('0');
+      expect(link.hasAttribute('data-ogti')).toBe(false);
+    });
+
+    test('hiding the same subtree twice is idempotent', () => {
+      const container = document.createElement('div');
+      const button = document.createElement('button');
+      button.setAttribute('tabindex', '2');
+      container.appendChild(button);
+      document.body.appendChild(container);
+
+      ariaHide(container);
+      ariaHide(container);
+      ariaUnhide(container);
+
+      expect(button.getAttribute('tabindex')).toBe('2');
+      expect(button.hasAttribute('data-ogti')).toBe(false);
+    });
+  });
 });
