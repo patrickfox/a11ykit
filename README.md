@@ -49,7 +49,7 @@ HTML page with no tooling at all.
 <!-- ES module -->
 <script type="module">
   import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
-    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.0.6/dist/a11ykit.esm.js';
+    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js';
 
   announce('Settings saved');
 </script>
@@ -57,7 +57,7 @@ HTML page with no tooling at all.
 
 ```html
 <!-- UMD global, for classic scripts -->
-<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.0.6/dist/a11ykit.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.umd.min.js"></script>
 <script>
   A11yKit.announce('Settings saved');
 </script>
@@ -71,7 +71,7 @@ To share one pinned URL across several modules, use an import map:
 <script type="importmap">
 {
   "imports": {
-    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.0.6/dist/a11ykit.esm.js"
+    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js"
   }
 }
 </script>
