@@ -154,6 +154,41 @@ This page deliberately does not import the library — each variant is
 implemented inline, because the point is to choose an implementation before
 changing `src/announce.ts`.
 
+## Verified results
+
+The fix in `src/announce.ts` was chosen from these runs. `announce()` defers its
+first write by 100ms; every later call is synchronous.
+
+| Strategy | Chromium macOS / VO | WebKit macOS / VO | Chrome Win 11 / NVDA |
+|---|---|---|---|
+| Baseline (write on creation) | silent | silent | silent |
+| One animation frame | silent | silent | silent |
+| Two animation frames | spoke | spoke | spoke |
+| Next macrotask (0ms) | spoke | **silent** | spoke |
+| 100ms | spoke | spoke | spoke |
+| Shipped fix, two calls in one task | — | — | spoke, correct message |
+
+Tested with VoiceOver on macOS 26 (Safari 26, Chrome, Brave) and NVDA 2026.2
+with Chrome on Windows 11.
+
+WebKit is the outlier. A macrotask is sufficient everywhere else, so shipping
+`setTimeout(0)` would have looked correct on two of the three pairings and been
+silent in Safari. Two animation frames also works everywhere, but
+`requestAnimationFrame` is paused in background tabs where it may never fire,
+so the timeout is the safer primitive.
+
+Part 1 was identical on all three: every manner sequence is silent on the first
+announcement and speaks on the second, so the cause is ordinality rather than
+the `aria-live` toggle.
+
+One result is unexplained: *Empty region created at page load* was silent under
+NVDA while *Two static regions* spoke, even though the two are mechanically
+near-identical — both append an empty region with `aria-live` set at load and
+then write `textContent` directly. A divergence between them is more likely a
+missed announcement during a manual run than a real platform difference. It does
+not affect the shipped fix, which creates the region lazily. Worth a re-run if
+anyone revisits eager creation.
+
 ## Expected failures
 
 One case is expected to fail today: *content added after hiding stays in the tab

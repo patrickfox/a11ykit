@@ -17,12 +17,19 @@ const CLEAR_DELAY = 500;
  * to a live region. That is why the first announce() of a page session was
  * silent while every later one worked.
  *
- * The delay was measured rather than guessed (VoiceOver on macOS 26):
+ * The delay was measured rather than guessed:
  *
- *   one animation frame    silent on both Chromium and WebKit
- *   two animation frames   works on both
- *   next macrotask (0ms)   works on Chromium, SILENT on WebKit
- *   100ms                  works on both
+ *                          Chromium      WebKit        Chromium
+ *                          macOS / VO    macOS / VO    Win 11 / NVDA
+ *   one animation frame      silent        silent        silent
+ *   two animation frames     spoke         spoke         spoke
+ *   next macrotask (0ms)     spoke        SILENT         spoke
+ *   100ms                    spoke         spoke         spoke
+ *
+ * (VoiceOver on macOS 26 with Safari 26 and Chrome; NVDA 2026.2 with Chrome
+ * on Windows 11.) WebKit is the outlier: a macrotask is enough everywhere
+ * else, so shipping setTimeout(0) would have looked correct on two of the
+ * three pairings and been silent in Safari.
  *
  * A timeout is used rather than two animation frames because
  * requestAnimationFrame is paused in background and hidden tabs, where it may
