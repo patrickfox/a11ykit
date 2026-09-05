@@ -433,7 +433,7 @@ dist/                      # Built files
 
 ## Browser Support
 
-- **ES Module builds**: Modern browsers with ES2018+ support
+- **ES Module builds**: Modern browsers with ES2020+ support (Chrome 80, Safari 13.1, Firefox 74 and later)
 - **UMD builds**: All browsers supporting ES5+ (IE11+)
 - **TypeScript**: Full type definitions included
 - **Source maps**: Available for all builds

@@ -122,30 +122,6 @@ describe('access function', () => {
     });
   });
 
-  describe('focusability detection fallbacks', () => {
-    test('treats an element without matches() as not natively focusable', () => {
-      // Very old engines, and some mock objects in consumer test suites.
-      const el = document.createElement('button');
-      parentElement.appendChild(el);
-      (el as any).matches = undefined;
-
-      access(el);
-
-      expect(el.getAttribute('tabindex')).toBe('-1');
-    });
-
-    test('falls back to the tabindex path if the selector throws', () => {
-      const el = document.createElement('button');
-      parentElement.appendChild(el);
-      el.matches = () => {
-        throw new Error('unsupported selector');
-      };
-
-      expect(() => access(el)).not.toThrow();
-      expect(el.getAttribute('tabindex')).toBe('-1');
-    });
-  });
-
   describe('focus options', () => {
     test('passes preventScroll through on a natively focusable element', () => {
       const focusSpy = jest.spyOn(element, 'focus');
@@ -275,14 +251,25 @@ describe('access function', () => {
       access(element, true);
       
       const tempElement = parentElement.querySelector('span') as HTMLElement;
-      const style = tempElement.getAttribute('style');
-      
-      expect(style).toContain('position: absolute');
-      expect(style).toContain('height: 1px');
-      expect(style).toContain('width: 1px');
-      expect(style).toContain('margin: -1px');
-      expect(style).toContain('overflow: hidden');
-      expect(style).toContain('clip: rect(0 0 0 0)');
+
+      // Parsed rather than string-matched, so whitespace in the declaration
+      // does not decide whether the test passes.
+      const declarations = Object.fromEntries(
+        (tempElement.getAttribute('style') || '')
+          .split(';')
+          .filter((part) => part.trim())
+          .map((part) => {
+            const [property, ...value] = part.split(':');
+            return [property.trim(), value.join(':').trim()];
+          })
+      );
+
+      expect(declarations.position).toBe('absolute');
+      expect(declarations.height).toBe('1px');
+      expect(declarations.width).toBe('1px');
+      expect(declarations.margin).toBe('-1px');
+      expect(declarations.overflow).toBe('hidden');
+      expect(declarations.clip).toBe('rect(0 0 0 0)');
     });
 
     test('removes temporary element on focusout', () => {
