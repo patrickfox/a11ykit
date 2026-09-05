@@ -16,7 +16,7 @@ A11yKit is a lightweight, JS accessibility (a11y) library that provides essentia
 - 🔒 **ARIA State Management** - Hide/show content from screen readers
 - 🎨 **Motion Preferences** - Detect and respond to `prefers-reduced-motion`
 - ⚡ **Lightweight** - Minimal footprint, no dependencies
-- ✅ **Well Tested** - Comprehensive Jest test suite with 97%+ coverage
+- ✅ **Well Tested** - Comprehensive Jest test suite, plus a manual screen reader harness
 
 ## Why does A11yKit exist?
 
@@ -37,7 +37,7 @@ npm install @a11yfox/a11ykit
 ```
 
 ```js
-import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion } from '@a11yfox/a11ykit';
+import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion, watchReducedMotion } from '@a11yfox/a11ykit';
 ```
 
 ### No build step
@@ -82,7 +82,7 @@ To share one pinned URL across several modules, use an import map:
 
 ## API Reference
 
-### `access(element, placeFocusBefore?)`
+### `access(element, placeFocusBefore?, options?)`
 
 Dynamically place focus on any element without hardcoded tabindex attributes.
 
@@ -93,12 +93,16 @@ Dynamically place focus on any element without hardcoded tabindex attributes.
   The parameter is currently typed `string | boolean`. Passing `true` inserts an *empty* hidden span, which announces nothing — pass the message you want read instead. The `boolean` half of the type is deprecated and will be removed in a future release.
 
   The message is inserted as text, not markup.
+- `options?: { preventScroll?: boolean }` - Optional. `preventScroll: true` focuses without scrolling the element into view, for when you have already positioned the viewport yourself.
+
+**Returns:** `HTMLElement` - The element that actually received focus: the target, or the temporary span when `placeFocusBefore` was used.
 
 **Behavior:**
 - Places focus on the target element
   - If a string message is provided as a second parameter, the script will create a temporary, non-visible element that contains the message.
 - Screen readers will read the contents of the target element
 - Automatically cleans up on blur, and restores any original tabindex state
+- Elements the browser already focuses — links, buttons, form controls, `summary`, `iframe`, media with controls, `contenteditable` — are focused directly, with no `tabindex` or `data-ogti` written at all. Only elements that are not natively focusable take the tabindex path.
 
 **Example:**
 ```typescript
@@ -285,6 +289,50 @@ body.prm .animated {
 **Why use `prefersReducedMotion()`?**
 Respecting user motion preferences is crucial for accessibility, particularly for users with vestibular disorders. This provides an easy, SSR-safe way to conditionally disable animations.
 
+---
+
+### `watchReducedMotion(options?)`
+
+The side effect half of `prefersReducedMotion()`, separated so it can be opted
+into, configured, and torn down.
+
+**Parameters:**
+- `options?.className?: string` - Class to toggle. Defaults to `prm`.
+- `options?.target?: HTMLElement` - Element to toggle it on. Defaults to `document.body`.
+
+**Returns:** `() => void` - Stops watching and removes the class.
+
+**Example:**
+```typescript
+const stop = watchReducedMotion();
+
+// In a single-page app or a test, release it when you are done:
+stop();
+```
+
+```typescript
+// Avoid a collision, or mark something other than the body
+const stop = watchReducedMotion({
+  className: 'reduce-motion',
+  target: document.querySelector('#app')!
+});
+```
+
+**Why this exists alongside `prefersReducedMotion()`:**
+`prefersReducedMotion()` reads like a getter but also mutates the DOM and
+registers a listener that can never be removed — awkward in single-page apps,
+tests, and hot reload. `watchReducedMotion()` makes the side effects explicit
+and reversible. Calling it before `document.body` exists is safe: the class is
+applied once the document is ready rather than being silently skipped.
+
+`prefersReducedMotion()` keeps its current behavior through 1.x, so nothing
+breaks. New code should prefer the pair: `prefersReducedMotion()` when you just
+need the value, `watchReducedMotion()` when you want the class.
+
+**When you need neither:** CSS `@media (prefers-reduced-motion: reduce)` handles
+the majority of cases with no JavaScript at all. The class is for when you need
+to branch in JS, or want to avoid repeating the media query across many rules.
+
 ## Development
 
 ### Building the Project
@@ -323,12 +371,12 @@ npm run test:ci
 ```
 
 The test suite includes:
-- **103 tests** covering all functions
+- **140 tests** covering all functions
 - **DOM manipulation testing** with jsdom
 - **Focus management and event handling**
 - **Accessibility-specific assertions**
 - **Edge case handling** (missing elements, no parent nodes, etc.)
-- **99% code coverage**
+- **100% statement coverage**
 
 #### Screen reader testing
 

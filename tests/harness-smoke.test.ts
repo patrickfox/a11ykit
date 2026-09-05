@@ -73,10 +73,24 @@ describeIfBuilt('manual harness runs against the built bundle', () => {
   });
 
   test('renders a case for every public export', () => {
+    // Derived from index.ts rather than hardcoded, so adding an export fails
+    // this for the right reason instead of needing the list updated by hand.
+    const indexSrc = readFileSync(join(ROOT, 'src/index.ts'), 'utf8');
+    const expected = new Set<string>();
+    const re = /export\s*\{([^}]+)\}/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(indexSrc)) !== null) {
+      if (/export\s+type/.test(indexSrc.slice(Math.max(0, match.index - 7), match.index + 7))) {
+        continue; // type-only exports have no runtime behaviour to exercise
+      }
+      for (const part of match[1].split(',')) {
+        const name = part.trim().split(/\s+as\s+/).pop()?.trim();
+        if (name) expected.add(name);
+      }
+    }
+
     const apis = new Set([...doc.querySelectorAll('.case')].map((c) => (c as HTMLElement).dataset.api));
-    expect(apis).toEqual(
-      new Set(['access', 'announce', 'ariaHide', 'ariaUnhide', 'prefersReducedMotion'])
-    );
+    expect(apis).toEqual(expected);
   });
 
   test('every case states what to do, what to expect, and what fails', () => {

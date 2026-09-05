@@ -145,7 +145,7 @@
 </div>
 
 <script type="module">
-import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
+import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion, watchReducedMotion }
   from '../dist/a11ykit.esm.js';
 
 const STORE = 'a11ykit-harness-v1';
@@ -229,7 +229,7 @@ const CASES = [
   {
     id: 'access-basic',
     api: 'access',
-    group: 'access(element, placeFocusBefore?)',
+    group: 'access(element, placeFocusBefore?, options?)',
     title: 'Focus moves to a non-interactive element and its content is read',
     do: 'Click “Move focus to heading”.',
     hear: '“Order confirmed, heading level 3” — the heading text and its role.',
@@ -240,7 +240,7 @@ const CASES = [
   {
     id: 'access-message',
     api: 'access',
-    group: 'access(element, placeFocusBefore?)',
+    group: 'access(element, placeFocusBefore?, options?)',
     title: 'A message is announced before the target element',
     do: 'Click “Move focus with message”.',
     hear: '“Three items removed” first, then the heading “Cart updated”.',
@@ -254,7 +254,7 @@ const CASES = [
   {
     id: 'access-cleanup',
     api: 'access',
-    group: 'access(element, placeFocusBefore?)',
+    group: 'access(element, placeFocusBefore?, options?)',
     title: 'Focus target is cleaned up on blur and leaves no trace',
     do: 'Click “Move focus”, then press Tab to move away, then Shift+Tab back through this region.',
     hear: 'Nothing left behind — the heading is no longer a focus stop when you tab back through.',
@@ -332,6 +332,64 @@ const CASES = [
     ]
   },
 
+  {
+    id: 'access-native',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?, options?)',
+    title: 'A natively focusable element keeps its place in the tab order',
+    issue: 20,
+    do: 'Tab through the region and note the order. Click “Focus the button”, then Tab forward and back through the region again.',
+    hear: 'The same three stops in the same order. The middle button is still reachable by Tab.',
+    not: 'The button being skipped, or gaining a tabindex. It is already focusable, so access() should call focus() and leave it alone.',
+    sandbox: '<a href="#b1">Before</a> <button type="button" data-target>The target button</button> <a href="#b2">After</a>',
+    actions: [{ label: 'Focus the button', run: (sb) => access(sb.querySelector('[data-target]')) }]
+  },
+  {
+    id: 'access-preventscroll',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?, options?)',
+    title: 'preventScroll focuses without scrolling the page',
+    issue: 20,
+    do: 'Scroll so this region is near the top of the window. Click “Focus, no scroll”, then “Focus, with scroll”.',
+    hear: 'Both announce the heading. The first must not move the page; the second may scroll it into view.',
+    not: 'The page jumping on the first button. That is the option being ignored.',
+    sandbox: '<h3 data-target>Focus target</h3><p>Watch the scroll position, not the announcement.</p>',
+    actions: [
+      { label: 'Focus, no scroll', run: (sb) => access(sb.querySelector('[data-target]'), undefined, { preventScroll: true }) },
+      { label: 'Focus, with scroll', secondary: true, run: (sb) => access(sb.querySelector('[data-target]')) }
+    ]
+  },
+  {
+    id: 'watch-prm',
+    api: 'watchReducedMotion',
+    group: 'watchReducedMotion(options?)',
+    title: 'Watches the preference, and stops cleanly',
+    issue: 19,
+    do: 'Click “Start watching”. Change the OS reduced-motion setting and watch the readout. Then click “Stop” and change the setting again.',
+    hear: 'Nothing — this is a visual check. While watching, the class tracks the OS setting. After “Stop”, the class is removed and no longer responds.',
+    not: 'The class lingering after “Stop”, or still updating. Either means the teardown did not release the listener.',
+    note: 'The older prefersReducedMotion() registers a listener that can never be removed. This is the version you can tear down, which is what makes it usable in a single-page app or a test.',
+    sandbox: '<p><strong>Target has class:</strong> <span data-cls>—</span></p><p><strong>Watching:</strong> <span data-state>no</span></p><div data-box style="padding:.4rem;border:1px dotted var(--line)">Watched element</div>',
+    actions: [
+      { label: 'Start watching', run: (sb) => {
+          const box = sb.querySelector('[data-box]');
+          if (sb._stop) return;
+          sb._stop = watchReducedMotion({ target: box, className: 'rm-demo' });
+          sb.querySelector('[data-state]').textContent = 'yes';
+          sb.querySelector('[data-cls]').textContent = String(box.classList.contains('rm-demo'));
+      }},
+      { label: 'Refresh readout', secondary: true, run: (sb) => {
+          sb.querySelector('[data-cls]').textContent =
+            String(sb.querySelector('[data-box]').classList.contains('rm-demo'));
+      }},
+      { label: 'Stop', secondary: true, run: (sb) => {
+          if (sb._stop) { sb._stop(); sb._stop = null; }
+          sb.querySelector('[data-state]').textContent = 'no';
+          sb.querySelector('[data-cls]').textContent =
+            String(sb.querySelector('[data-box]').classList.contains('rm-demo'));
+      }}
+    ]
+  },
   {
     id: 'prm',
     api: 'prefersReducedMotion',

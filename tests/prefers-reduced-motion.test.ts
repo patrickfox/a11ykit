@@ -187,18 +187,250 @@ describe('prefers-reduced-motion', () => {
     });
   });
 
+  describe('watchReducedMotion', () => {
+    const changeHandler = (): ((e: any) => void) =>
+      mockMediaQueryList.addEventListener.mock.calls
+        .filter((call: any[]) => call[0] === 'change')
+        .slice(-1)[0][1];
+
+    test('applies the class for the current preference', () => {
+      mockMediaQueryList.matches = true;
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      watchReducedMotion();
+
+      expect(document.body.classList.contains('prm')).toBe(true);
+    });
+
+    test('keeps the class in sync with changes', () => {
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+      watchReducedMotion();
+
+      expect(document.body.classList.contains('prm')).toBe(false);
+
+      changeHandler()({ matches: true });
+      expect(document.body.classList.contains('prm')).toBe(true);
+
+      changeHandler()({ matches: false });
+      expect(document.body.classList.contains('prm')).toBe(false);
+    });
+
+    test('teardown removes the listener and the class', () => {
+      mockMediaQueryList.matches = true;
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      const stop = watchReducedMotion();
+      expect(document.body.classList.contains('prm')).toBe(true);
+
+      stop();
+
+      expect(mockMediaQueryList.removeEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function)
+      );
+      // Leaving the class would freeze the page in its last watched state.
+      expect(document.body.classList.contains('prm')).toBe(false);
+    });
+
+    test('ignores a change delivered after teardown', () => {
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      const stop = watchReducedMotion();
+      const handler = changeHandler();
+
+      stop();
+      expect(document.body.classList.contains('prm')).toBe(false);
+
+      // Anyone still holding the handler must not be able to resurrect the
+      // class after the caller has torn the watcher down.
+      handler({ matches: true });
+      expect(document.body.classList.contains('prm')).toBe(false);
+    });
+
+    test('teardown is safe to call more than once', () => {
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+      const stop = watchReducedMotion();
+
+      stop();
+      expect(() => stop()).not.toThrow();
+      expect(mockMediaQueryList.removeEventListener).toHaveBeenCalledTimes(1);
+    });
+
+    test('accepts a custom class name', () => {
+      mockMediaQueryList.matches = true;
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      const stop = watchReducedMotion({ className: 'reduce-motion' });
+
+      expect(document.body.classList.contains('reduce-motion')).toBe(true);
+      expect(document.body.classList.contains('prm')).toBe(false);
+
+      stop();
+      expect(document.body.classList.contains('reduce-motion')).toBe(false);
+    });
+
+    test('accepts a custom target element', () => {
+      mockMediaQueryList.matches = true;
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      const stop = watchReducedMotion({ target });
+
+      expect(target.classList.contains('prm')).toBe(true);
+      expect(document.body.classList.contains('prm')).toBe(false);
+
+      stop();
+      expect(target.classList.contains('prm')).toBe(false);
+    });
+
+    test('preserves other classes on the target', () => {
+      document.body.className = 'existing other';
+      mockMediaQueryList.matches = true;
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      const stop = watchReducedMotion();
+      expect(document.body.className).toContain('existing');
+      expect(document.body.className).toContain('other');
+
+      stop();
+      expect(document.body.className).toContain('existing');
+      expect(document.body.className).toContain('other');
+    });
+
+    describe('when document.body does not exist yet', () => {
+      // A script in <head> runs before <body>. The documented promise is that
+      // the class is applied once the document is ready, rather than silently
+      // skipped — so it needs a test, not just a comment.
+      let originalBody: HTMLElement;
+
+      beforeEach(() => {
+        originalBody = document.body;
+        Object.defineProperty(document, 'body', {
+          configurable: true,
+          get: () => null
+        });
+      });
+
+      afterEach(() => {
+        Object.defineProperty(document, 'body', {
+          configurable: true,
+          get: () => originalBody
+        });
+      });
+
+      test('does not throw', () => {
+        mockMediaQueryList.matches = true;
+        jest.resetModules();
+        const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+        expect(() => watchReducedMotion()).not.toThrow();
+      });
+
+      test('applies the class once the document is ready', () => {
+        mockMediaQueryList.matches = true;
+        jest.resetModules();
+        const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+        watchReducedMotion();
+
+        // Body exists by the time the document fires.
+        Object.defineProperty(document, 'body', {
+          configurable: true,
+          get: () => originalBody
+        });
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+
+        expect(originalBody.classList.contains('prm')).toBe(true);
+      });
+
+      test('teardown before the document is ready cancels the pending apply', () => {
+        mockMediaQueryList.matches = true;
+        jest.resetModules();
+        const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+        const stop = watchReducedMotion();
+        stop();
+
+        Object.defineProperty(document, 'body', {
+          configurable: true,
+          get: () => originalBody
+        });
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+
+        expect(originalBody.classList.contains('prm')).toBe(false);
+      });
+
+      test('prefersReducedMotion still reports the value', () => {
+        mockMediaQueryList.matches = true;
+        jest.resetModules();
+        const { prefersReducedMotion } = require('../src/prefers-reduced-motion');
+
+        // Reading the preference must not depend on there being a body to mark.
+        expect(prefersReducedMotion()).toBe(true);
+      });
+    });
+
+    test('multiple watchers can run and be torn down independently', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      mockMediaQueryList.matches = true;
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      const stopBody = watchReducedMotion();
+      const stopTarget = watchReducedMotion({ target, className: 'rm' });
+
+      expect(document.body.classList.contains('prm')).toBe(true);
+      expect(target.classList.contains('rm')).toBe(true);
+
+      stopBody();
+
+      expect(document.body.classList.contains('prm')).toBe(false);
+      expect(target.classList.contains('rm')).toBe(true);
+
+      stopTarget();
+      expect(target.classList.contains('rm')).toBe(false);
+    });
+  });
+
   describe('edge cases and browser compatibility', () => {
     test('handles matchMedia not being available', () => {
+      // Previously this threw. A utility whose whole job is to answer a
+      // question should not crash the caller when it cannot; it reports no
+      // preference, which is what the media query itself defaults to.
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
         value: undefined,
       });
 
-      expect(() => {
-        jest.resetModules();
-        const { prefersReducedMotion } = require('../src/prefers-reduced-motion');
-        prefersReducedMotion();
-      }).toThrow();
+      jest.resetModules();
+      const { prefersReducedMotion } = require('../src/prefers-reduced-motion');
+
+      expect(() => prefersReducedMotion()).not.toThrow();
+      expect(prefersReducedMotion()).toBe(false);
+    });
+
+    test('watchReducedMotion returns a usable teardown without matchMedia', () => {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: undefined,
+      });
+
+      jest.resetModules();
+      const { watchReducedMotion } = require('../src/prefers-reduced-motion');
+
+      let stop: () => void = () => undefined;
+      expect(() => { stop = watchReducedMotion(); }).not.toThrow();
+      expect(() => stop()).not.toThrow();
     });
 
     test('handles MediaQueryListEvent with matches property', () => {
