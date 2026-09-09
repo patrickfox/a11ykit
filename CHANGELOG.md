@@ -5,6 +5,42 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] — unreleased
+
+### ⚠️ Breaking
+
+**`ariaHide()` no longer sets `aria-hidden="true"`** in browsers that support
+`inert`. It sets the `inert` attribute instead, which removes the subtree from
+the accessibility tree and the tab order in one step. The API is unchanged —
+same functions, same arguments — but assertions and CSS selectors targeting
+`aria-hidden` need updating. See [Migrating to 2.0](README.md#migrating-to-20).
+
+Browsers without `inert` (pre Chrome 102 / Firefox 112 / Safari 15.5) fall back
+to the 1.x implementation automatically.
+
+### Changed
+
+- `ariaHide()` and `ariaUnhide()` are built on native `inert` ([#16]). This
+  fixes two limitations that could not be solved in the previous approach:
+  - Content rendered into the subtree **after** `ariaHide()` was called stayed
+    fully tabbable while sitting under `aria-hidden="true"`. Async-rendered
+    modal content hit this routinely. The browser now enforces `inert`
+    continuously.
+  - `querySelectorAll` does not descend into shadow roots, so web components
+    kept their focusable children in the tab order. Shadow DOM is now covered.
+- `ariaHide()` writes no `tabindex` or `data-ogti` on descendants. There is no
+  bookkeeping to corrupt.
+- An element that is already `inert` is left alone, and `ariaUnhide()` clears
+  `inert` only when `ariaHide()` set it.
+
+### Note for jsdom users
+
+jsdom does not implement `inert` — the property is absent from
+`HTMLElement.prototype` — so the library detects no support and takes the 1.x
+fallback path there. Existing `aria-hidden` assertions will keep passing in
+jsdom, which means jsdom cannot tell you whether your app is correct in a real
+browser. This library's own suite shims the property to test both paths.
+
 ## [1.1.0] — 2026-09-05
 
 ### ⚠️ Behaviour changes
@@ -115,12 +151,14 @@ fire at all. JAWS is not yet tested.
 - Split into modules and added a rollup build.
 - Added automated testing.
 
+[2.0.0]: https://github.com/patrickfox/a11ykit/releases/tag/v2.0.0
 [1.1.0]: https://github.com/patrickfox/a11ykit/releases/tag/v1.1.0
 [1.0.5]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.5
 [1.0.4]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.4
 [1.0.3]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.3
 [1.0.2]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.2
 [#12]: https://github.com/patrickfox/a11ykit/issues/12
+[#16]: https://github.com/patrickfox/a11ykit/issues/16
 [#13]: https://github.com/patrickfox/a11ykit/issues/13
 [#14]: https://github.com/patrickfox/a11ykit/issues/14
 [#15]: https://github.com/patrickfox/a11ykit/issues/15

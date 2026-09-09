@@ -50,7 +50,7 @@ HTML page with no tooling at all.
 ```html
 <script type="module">
   import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
-    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js';
+    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@2.0.0/dist/a11ykit.esm.js';
 
   announce('Settings saved');
 </script>
@@ -63,7 +63,7 @@ version means editing each one. An import map lets you declare it once:
 <script type="importmap">
 {
   "imports": {
-    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js"
+    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@2.0.0/dist/a11ykit.esm.js"
   }
 }
 </script>
@@ -84,7 +84,7 @@ For classic scripts, inline handlers, or anywhere `type="module"` is not an
 option:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@2.0.0/dist/a11ykit.umd.min.js"></script>
 <script>
   A11yKit.announce('Settings saved');
 </script>
@@ -193,15 +193,22 @@ Manage ARIA visibility to hide/show content from assistive technology.
 - `parent?: HTMLElement` - Element to hide/unhide (default: `document.body`)
 
 **`ariaHide()` Behavior:**
-- Sets `aria-hidden="true"` on the parent element
-- Finds all focusable elements and sets `tabindex="-1"`
-- Preserves original tabindex values in `data-ogti` attributes
-- Skips processing if parent already has a hidden ancestor
+- Sets the `inert` attribute on the parent element, which removes the subtree
+  from the accessibility tree *and* the tab order in one step, enforced
+  continuously by the browser
+- Writes no `tabindex` and no `data-ogti` — there is nothing to bookkeep
+- Leaves an element that is already `inert` untouched
+- Falls back to the pre-2.0 behaviour (`aria-hidden` plus per-element
+  `tabindex`) in browsers without `inert` support
 
 **`ariaUnhide()` Behavior:**
-- Removes `aria-hidden` attribute from parent
-- Restores original tabindex values from `data-ogti` attributes
-- Removes temporary `data-ogti` attributes
+- Removes `inert`, but only if `ariaHide()` set it
+- Also reverses the fallback behaviour, so a subtree hidden by an older version
+  of the library is cleaned up correctly
+
+> **Changed in 2.0:** `ariaHide()` no longer sets `aria-hidden="true"` in
+> browsers that support `inert`. If you assert on `aria-hidden` in tests, see
+> [Migrating to 2.0](#migrating-to-20).
 
 **Example:**
 ```typescript
@@ -246,9 +253,9 @@ browser makes the rest of the page inert for you, with no bookkeeping and no
 attribute to remember to remove. Reach for `ariaHide()` when you need to hide a
 region that isn't a modal, or when you can't use a native dialog.
 
-Note also that `ariaHide()` takes a one-time snapshot of the focusable elements
-in the subtree. Anything rendered into that subtree afterwards stays in the tab
-order, and elements inside shadow roots are not traversed.
+Since 2.0 this is enforced by the browser rather than snapshotted, so content
+rendered into the subtree after hiding is covered automatically, and shadow
+roots are included. Both were real gaps in the previous implementation.
 
 **Why use `ariaHide()`/`ariaUnhide()`?**
 Properly managing ARIA states and focus trapping requires careful coordination of multiple attributes. These functions handle the complexity automatically and reversibly.
@@ -443,9 +450,72 @@ dist/                      # Built files
 └── types/                # TypeScript definitions
 ```
 
+## Migrating to 2.0
+
+`ariaHide()` and `ariaUnhide()` are now built on the native
+[`inert`](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inert)
+attribute. The API is unchanged — same functions, same arguments — but what
+they write to the DOM is different.
+
+### What changed
+
+| | 1.x | 2.0 |
+|---|---|---|
+| Attribute on the parent | `aria-hidden="true"` | `inert` |
+| Focusable descendants | each given `tabindex="-1"` and `data-ogti` | untouched |
+| Content added after hiding | stays in the tab order | covered automatically |
+| Shadow DOM | not traversed | covered |
+
+### What you may need to do
+
+**If you assert on `aria-hidden` in tests**, those assertions will fail. Assert
+on `inert` instead:
+
+```diff
+- expect(sidebar).toHaveAttribute('aria-hidden', 'true');
++ expect(sidebar).toHaveAttribute('inert');
+```
+
+**If you style hidden regions with `[aria-hidden="true"]`**, update the
+selector:
+
+```diff
+- [aria-hidden="true"] { opacity: .5; }
++ [inert] { opacity: .5; }
+```
+
+**If your test environment is jsdom**, note that it does not implement `inert`
+— the property is absent from `HTMLElement.prototype`, so the library detects
+no support and uses the 1.x fallback. Your existing `aria-hidden` assertions
+will keep passing there, which means jsdom will not tell you whether your app
+is correct in a real browser. This library's own suite shims the property to
+test both paths; `tests/aria-hide.test.ts` shows how.
+
+**Everything else is unchanged.** If you only call `ariaHide()` and
+`ariaUnhide()` and never inspect the attributes they write, no change is needed.
+
+### Why
+
+The previous implementation reimplemented, by hand, what `inert` has done
+natively in every major browser since 2023. It read the focusable elements once
+and set `tabindex="-1"` on each, which meant:
+
+- content rendered into the subtree afterwards stayed fully tabbable while
+  sitting under `aria-hidden="true"`, which async-rendered modal content hits
+  routinely
+- `querySelectorAll` does not descend into shadow roots, so web components kept
+  their focusable children in the tab order
+- the `data-ogti` backup was itself a source of bugs — see
+  [#12](https://github.com/patrickfox/a11ykit/issues/12)
+
+`inert` has none of these problems, because the browser enforces it
+continuously rather than at the moment you call the function.
+
 ## Browser Support
 
 - **ES Module builds**: Modern browsers with ES2020+ support (Chrome 80, Safari 13.1, Firefox 74 and later)
+- **`inert`**: Chrome 102, Firefox 112, Safari 15.5 and later. Older browsers
+  fall back to the 1.x `aria-hidden` + `tabindex` implementation automatically
 - **UMD builds**: All browsers supporting ES5+ (IE11+)
 - **TypeScript**: Full type definitions included
 - **Source maps**: Available for all builds

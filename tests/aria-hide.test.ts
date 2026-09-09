@@ -1,5 +1,34 @@
 import { ariaHide, ariaUnhide } from '../src/aria-hide';
 
+/**
+ * jsdom does not implement `inert`: the property is absent from
+ * HTMLElement.prototype, and assigning it creates a plain expando with no
+ * attribute reflection and no behaviour. Every suite below therefore exercises
+ * the pre-2.0 fallback path unless it installs this shim, which reflects the
+ * attribute the way a supporting browser does.
+ */
+const withInertSupport = (): void => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'inert', {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.hasAttribute('inert');
+      },
+      set(this: HTMLElement, value: boolean) {
+        if (value) {
+          this.setAttribute('inert', '');
+        } else {
+          this.removeAttribute('inert');
+        }
+      }
+    });
+  });
+
+  afterEach(() => {
+    delete (HTMLElement.prototype as any).inert;
+  });
+};
+
 describe('aria-hide functions', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
@@ -315,6 +344,119 @@ describe('aria-hide functions', () => {
       document.body.appendChild(container);
       
       expect(() => ariaUnhide(container)).not.toThrow();
+    });
+  });
+
+  describe('with native inert support', () => {
+    withInertSupport();
+
+    const sandbox = (): HTMLElement => {
+      const container = document.createElement('div');
+      container.innerHTML =
+        '<a href="/x">A link</a><button type="button">A button</button><input aria-label="f">';
+      document.body.appendChild(container);
+      return container;
+    };
+
+    test('marks the subtree inert', () => {
+      const container = sandbox();
+
+      ariaHide(container);
+
+      expect(container.hasAttribute('inert')).toBe(true);
+      expect(container.inert).toBe(true);
+    });
+
+    test('does not set aria-hidden', () => {
+      // The 2.0 breaking change. inert removes the subtree from the
+      // accessibility tree without an observable attribute.
+      const container = sandbox();
+
+      ariaHide(container);
+
+      expect(container.hasAttribute('aria-hidden')).toBe(false);
+    });
+
+    test('writes no tabindex bookkeeping at all', () => {
+      // The browser enforces inert continuously, so there is nothing to
+      // snapshot and nothing to restore.
+      const container = sandbox();
+
+      ariaHide(container);
+
+      expect(container.querySelectorAll('[data-ogti]')).toHaveLength(0);
+      expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    });
+
+    test('covers content added after hiding', () => {
+      // The limitation that motivated the rewrite: the old implementation
+      // snapshotted once, so late-rendered content stayed tabbable.
+      const container = sandbox();
+      ariaHide(container);
+
+      const late = document.createElement('button');
+      late.textContent = 'Added after hiding';
+      container.appendChild(late);
+
+      // Nothing needs doing to the new child — inert is inherited from the
+      // subtree root and enforced by the browser.
+      expect(late.hasAttribute('tabindex')).toBe(false);
+      expect(container.hasAttribute('inert')).toBe(true);
+    });
+
+    test('unhide clears inert', () => {
+      const container = sandbox();
+
+      ariaHide(container);
+      ariaUnhide(container);
+
+      expect(container.hasAttribute('inert')).toBe(false);
+      expect(container.inert).toBe(false);
+    });
+
+    test('hiding twice is idempotent, and one unhide reverses it', () => {
+      const container = sandbox();
+
+      ariaHide(container);
+      ariaHide(container);
+      ariaUnhide(container);
+
+      expect(container.hasAttribute('inert')).toBe(false);
+    });
+
+    test('defaults to document.body', () => {
+      ariaHide();
+      expect(document.body.hasAttribute('inert')).toBe(true);
+
+      ariaUnhide();
+      expect(document.body.hasAttribute('inert')).toBe(false);
+    });
+
+    test('leaves an inert the caller set alone', () => {
+      // Someone else's inert is not ours to clear.
+      const container = sandbox();
+      container.setAttribute('inert', '');
+
+      ariaHide(container);
+      ariaUnhide(container);
+
+      expect(container.hasAttribute('inert')).toBe(true);
+    });
+
+    test('cleans up a subtree left behind by the fallback path', () => {
+      // A page can be hidden by an older version of the library, or by the
+      // fallback before a browser upgrade. Unhide has to restore that too.
+      const container = sandbox();
+      const link = container.querySelector('a')!;
+      container.setAttribute('aria-hidden', 'true');
+      link.setAttribute('data-ogti', '2');
+      link.setAttribute('tabindex', '-1');
+
+      ariaUnhide(container);
+
+      expect(container.hasAttribute('aria-hidden')).toBe(false);
+      expect(link.getAttribute('tabindex')).toBe('2');
+      expect(link.hasAttribute('data-ogti')).toBe(false);
     });
   });
 
