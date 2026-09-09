@@ -190,13 +190,27 @@ missed announcement during a manual run than a real platform difference. It does
 not affect the shipped fix, which creates the region lazily. Worth a re-run if
 anyone revisits eager creation.
 
+## 2.0 verification run
+
+VoiceOver with Brave 1.94 on macOS, against the 2.0.0 build. Every case in the
+main harness passes.
+
+The case worth calling out is *Content added after hiding is covered too*. It
+was written as a deliberate expected failure to make the `inert` migration
+measurable, and passes on 2.0 with no change to what it asks the tester to do —
+so `inert` is confirmed working with a real screen reader, which is the one
+thing jsdom cannot establish.
+
+*The same message announced twice is spoken twice* failed on this run and was
+fixed: a synchronous clear-and-rewrite of the same string is not a mutation, so
+nothing was announced. Notably JAWS passed that case while VoiceOver failed it.
+
 ## Expected failures
 
-One case is expected to fail today: *content added after hiding stays in the tab
-order*. `ariaHide()` takes a one-time snapshot, so anything rendered into the
-subtree afterwards is still tabbable. This is a documented limitation, not a
-regression. The case exists so the 2.0.0 `inert` migration is measurable — it
-should flip to pass with no other change.
+None. The *content added after hiding* case was the standing exception through
+1.x, where `ariaHide()` took a one-time snapshot and anything rendered into the
+subtree afterwards stayed tabbable. 2.0 builds on `inert`, which the browser
+enforces continuously, and the case now passes.
 
 ## Coverage worth recording
 
