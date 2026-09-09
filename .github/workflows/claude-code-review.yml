@@ -35,7 +35,7 @@ jobs:
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           # Automation mode (which is what supplying a prompt selects) posts no
           # tracking comment by default. That means a run which errors before
