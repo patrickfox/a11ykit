@@ -42,10 +42,6 @@ jobs:
           # producing a review leaves nothing on the PR at all — the only
           # evidence is in the Actions log, so a broken review looks the same as
           # one that had no feedback. This surfaces it on the PR itself.
-          # TEMPORARY — diagnosing a persistent is_error with no model usage.
-          # Logs are public; remove as soon as the error text is captured.
-          show_full_output: true
-
           track_progress: true
 
           # The workflow re-runs on every push to a PR, so without this each
