@@ -85,6 +85,14 @@
          background: var(--sandbox); padding: .1em .35em; border-radius: 3px; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
                      overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+
+  /* The reduced-motion case needs a visible effect, or the only way to verify
+     it is to open DevTools and watch the class list. */
+  .rm-target { padding: .6rem; border: 2px solid var(--line); border-radius: 6px;
+               background: var(--sandbox); animation: rm-pulse 1.4s ease-in-out infinite; }
+  .rm-target.rm-demo { animation: none; border-color: var(--pass); background: var(--card);
+                       outline: 2px solid var(--pass); outline-offset: 2px; }
+  @keyframes rm-pulse { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
   #load-error { display: none; border: 2px solid var(--fail); color: var(--fail);
                 border-radius: 8px; padding: 1rem; margin: 1.5rem 0; }
 </style>
@@ -350,13 +358,26 @@ const CASES = [
     group: 'access(element, placeFocusBefore?, options?)',
     title: 'preventScroll focuses without scrolling the page',
     issue: 20,
-    do: 'Scroll so this region is near the top of the window. Click “Focus, no scroll”, then “Focus, with scroll”.',
-    hear: 'Both announce the heading. The first must not move the page; the second may scroll it into view.',
-    not: 'The page jumping on the first button. That is the option being ignored.',
-    sandbox: '<h3 data-target>Focus target</h3><p>Watch the scroll position, not the announcement.</p>',
+    do: 'Click either button without scrolling first. The target sits far below the fold, so the two behave differently. Read the scroll position shown after each.',
+    hear: 'Nothing — this is a visual check, and a browser-level one. <strong>Screen reader cursors move independently of <code>focus()</code></strong>: VoiceOver will generally bring its cursor into view regardless, so judge this by the recorded scroll position, not by what the page looks like afterwards.',
+    not: 'Both buttons producing the same scroll position. That would mean the option is being ignored by the browser.',
+    note: 'This tests a browser API, not screen reader behaviour. preventScroll suppresses the scroll that focus() itself performs; it cannot stop assistive technology from scrolling its own cursor into view, and nothing in a library can.',
+    sandbox: '<p><strong>scrollY before → after:</strong> <span data-out>not run yet</span></p><div style="height:120vh;background:repeating-linear-gradient(var(--sandbox),var(--sandbox) 20px,transparent 20px,transparent 40px)"></div><h3 data-target>Focus target (far below the fold)</h3>',
     actions: [
-      { label: 'Focus, no scroll', run: (sb) => access(sb.querySelector('[data-target]'), undefined, { preventScroll: true }) },
-      { label: 'Focus, with scroll', secondary: true, run: (sb) => access(sb.querySelector('[data-target]')) }
+      { label: 'Focus, preventScroll', run: (sb) => {
+          const before = Math.round(window.scrollY);
+          access(sb.querySelector('[data-target]'), undefined, { preventScroll: true });
+          sb.querySelector('[data-out]').textContent =
+            before + ' → ' + Math.round(window.scrollY) + '  (preventScroll: true)';
+      }},
+      { label: 'Focus, allow scroll', secondary: true, run: (sb) => {
+          window.scrollTo(0, 0);
+          const before = Math.round(window.scrollY);
+          access(sb.querySelector('[data-target]'));
+          sb.querySelector('[data-out]').textContent =
+            before + ' → ' + Math.round(window.scrollY) + '  (default)';
+      }},
+      { label: 'Reset scroll', secondary: true, run: () => window.scrollTo(0, 0) }
     ]
   },
   {
@@ -365,11 +386,11 @@ const CASES = [
     group: 'watchReducedMotion(options?)',
     title: 'Watches the preference, and stops cleanly',
     issue: 19,
-    do: 'Click “Start watching”. Change the OS reduced-motion setting and watch the readout. Then click “Stop” and change the setting again.',
-    hear: 'Nothing — this is a visual check. While watching, the class tracks the OS setting. After “Stop”, the class is removed and no longer responds.',
-    not: 'The class lingering after “Stop”, or still updating. Either means the teardown did not release the listener.',
+    do: 'Click “Start watching”. Change the OS reduced-motion setting and watch the box below. Then click “Stop” and change the setting again.',
+    hear: 'Nothing — this is a visual check. While watching, the box stops animating and turns green when reduced motion is on, and resumes when it is off. After “Stop” the box returns to animating and no longer responds to the setting.',
+    not: 'The box still responding after “Stop”, or staying green. Either means the teardown did not release the listener or remove the class.',
     note: 'The older prefersReducedMotion() registers a listener that can never be removed. This is the version you can tear down, which is what makes it usable in a single-page app or a test.',
-    sandbox: '<p><strong>Target has class:</strong> <span data-cls>—</span></p><p><strong>Watching:</strong> <span data-state>no</span></p><div data-box style="padding:.4rem;border:1px dotted var(--line)">Watched element</div>',
+    sandbox: '<p><strong>Target has class:</strong> <span data-cls>—</span></p><p><strong>Watching:</strong> <span data-state>no</span></p><div data-box class="rm-target">Watched element — this box changes colour and stops moving when the class is applied</div>',
     actions: [
       { label: 'Start watching', run: (sb) => {
           const box = sb.querySelector('[data-box]');

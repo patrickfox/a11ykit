@@ -49,8 +49,19 @@ const isValidManners = (value: any): value is Manners => {
   return value === 'polite' || value === 'assertive';
 };
 
+/**
+ * How long the region stays empty before a repeated message is written back.
+ *
+ * A screen reader observes the DOM after a task completes, not during it, so a
+ * synchronous clear-and-rewrite of the same string is not a mutation at all —
+ * the end state is identical to the start state and nothing is announced. The
+ * clear has to land in its own task to be seen.
+ */
+const REPEAT_DELAY = 100;
+
 let clearTimer: number | null = null;
 let registrationTimer: number | null = null;
+let repeatTimer: number | null = null;
 let pending: { message: string; manners: Manners } | null = null;
 
 /**
@@ -60,11 +71,7 @@ let pending: { message: string; manners: Manners } | null = null;
  */
 let registered: HTMLElement | null = null;
 
-const writeMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
-  // Cycling through 'off' makes an identical consecutive message count as a
-  // change, so a repeated announcement is still spoken.
-  announcer.setAttribute('aria-live', 'off');
-  announcer.textContent = '';
+const applyMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
   announcer.setAttribute('aria-live', manners);
   announcer.textContent = message;
 
@@ -75,6 +82,32 @@ const writeMessage = (announcer: HTMLElement, message: string, manners: Manners)
     announcer.textContent = '';
     clearTimer = null;
   }, CLEAR_DELAY);
+};
+
+const writeMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
+  if (repeatTimer) {
+    clearTimeout(repeatTimer);
+    repeatTimer = null;
+  }
+
+  // Writing the same string the region already holds is not a change, so the
+  // announcement is dropped. Empty it now and write back on a later task, which
+  // the screen reader sees as two distinct mutations.
+  if (announcer.textContent === message) {
+    announcer.setAttribute('aria-live', 'off');
+    announcer.textContent = '';
+
+    repeatTimer = window.setTimeout(() => {
+      repeatTimer = null;
+      const el = document.getElementById(ANNOUNCER_ID) as HTMLElement | null;
+      if (el) {
+        applyMessage(el, message, manners);
+      }
+    }, REPEAT_DELAY);
+    return;
+  }
+
+  applyMessage(announcer, message, manners);
 };
 
 export const announce = (message: string, manners?: string): HTMLElement => {
@@ -93,6 +126,10 @@ export const announce = (message: string, manners?: string): HTMLElement => {
 
     registered = null;
     pending = null;
+    if (repeatTimer) {
+      clearTimeout(repeatTimer);
+      repeatTimer = null;
+    }
     if (registrationTimer) {
       clearTimeout(registrationTimer);
       registrationTimer = null;

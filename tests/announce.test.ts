@@ -297,6 +297,78 @@ describe('announce function', () => {
       expect(replacement.textContent).toBe('After teardown');
     });
 
+    test('an identical repeat empties the region before writing it back', () => {
+      // A synchronous clear-and-rewrite of the same string is not a mutation:
+      // the end state matches the start state, so nothing is announced. The
+      // clear has to land in its own task to be observed.
+      announce('Item added to cart');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
+      expect(announcer.textContent).toBe('Item added to cart');
+
+      announce('Item added to cart');
+
+      // Emptied now...
+      expect(announcer.textContent).toBe('');
+      expect(announcer.getAttribute('aria-live')).toBe('off');
+
+      // ...and written back on a later task.
+      jest.advanceTimersByTime(100);
+      expect(announcer.textContent).toBe('Item added to cart');
+      expect(announcer.getAttribute('aria-live')).toBe('polite');
+    });
+
+    test('a different message is written immediately', () => {
+      // Only an identical repeat needs the round trip.
+      announce('First');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
+
+      announce('Second');
+
+      expect(announcer.textContent).toBe('Second');
+    });
+
+    test('an identical repeat honours a changed manner', () => {
+      announce('Connection lost');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
+
+      announce('Connection lost', 'assertive');
+      jest.advanceTimersByTime(100);
+
+      expect(announcer.textContent).toBe('Connection lost');
+      expect(announcer.getAttribute('aria-live')).toBe('assertive');
+    });
+
+    test('a third message during a pending repeat wins', () => {
+      announce('Same');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
+
+      announce('Same');            // schedules the write-back
+      announce('Something else');  // supersedes it
+
+      expect(announcer.textContent).toBe('Something else');
+
+      // The superseded write-back must not fire and clobber it.
+      jest.advanceTimersByTime(100);
+      expect(announcer.textContent).toBe('Something else');
+    });
+
+    test('a repeat still clears itself after the usual delay', () => {
+      announce('Saved');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
+
+      announce('Saved');
+      jest.advanceTimersByTime(100);
+      expect(announcer.textContent).toBe('Saved');
+
+      jest.advanceTimersByTime(500);
+      expect(announcer.textContent).toBe('');
+    });
+
     test('restarts the delay if the region is replaced mid-wait', () => {
       // The pending timer belongs to the region that scheduled it. If that
       // region is torn down before it fires, the replacement is a brand-new
