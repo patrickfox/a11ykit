@@ -308,9 +308,11 @@ describe('announce function', () => {
 
       announce('Item added to cart');
 
-      // Emptied now...
+      // Emptied now, but still a live region: switching it off here would
+      // deregister it, and turning it back on next task reintroduces the
+      // registration delay that makes a first announcement silent.
       expect(announcer.textContent).toBe('');
-      expect(announcer.getAttribute('aria-live')).toBe('off');
+      expect(announcer.getAttribute('aria-live')).toBe('polite');
 
       // ...and written back on a later task.
       jest.advanceTimersByTime(100);

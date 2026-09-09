@@ -93,8 +93,13 @@ const writeMessage = (announcer: HTMLElement, message: string, manners: Manners)
   // Writing the same string the region already holds is not a change, so the
   // announcement is dropped. Empty it now and write back on a later task, which
   // the screen reader sees as two distinct mutations.
+  //
+  // aria-live is deliberately left alone here. Setting it to 'off' would tell
+  // the screen reader to stop watching the region, and turning it back on in
+  // the next task forces the same re-registration that makes a first
+  // announcement silent. In 1.x that toggle was harmless only because the whole
+  // cycle was coalesced into one task and never observed.
   if (announcer.textContent === message) {
-    announcer.setAttribute('aria-live', 'off');
     announcer.textContent = '';
 
     repeatTimer = window.setTimeout(() => {

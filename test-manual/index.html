@@ -184,9 +184,10 @@ const CASES = [
     api: 'announce',
     group: 'announce(message, manners?)',
     title: 'Polite announcement does not interrupt',
-    do: 'Start reading this paragraph with your screen reader, then click “Announce polite” while it is still speaking.',
+    do: 'Start your screen reader reading this paragraph, then activate “Announce polite” <strong>while it is still speaking</strong>. Activate with the spacebar rather than a screen reader pass-through command — see the note.',
     hear: 'The current sentence finishes first, then “Settings saved”.',
     not: 'The message cutting off what was being read.',
+    note: 'Polite only means “wait for the current utterance to finish”. If nothing is being spoken at the moment the region updates, polite and assertive are indistinguishable — so this case is only meaningful while speech is actually in flight. That is also why the activation method matters: VoiceOver’s own activate command (Control+Option+Space) speaks its own feedback and flushes the speech queue, leaving nothing for a polite message to wait behind, so it can look assertive. Plain spacebar on a native button activates it through the browser without that flush.',
     actions: [{ label: 'Announce polite', run: () => announce('Settings saved','polite') }]
   },
   {
@@ -194,7 +195,7 @@ const CASES = [
     api: 'announce',
     group: 'announce(message, manners?)',
     title: 'Assertive announcement interrupts',
-    do: 'Start reading this paragraph, then click “Announce assertive” while it is still speaking.',
+    do: 'Start reading this paragraph, then activate “Announce assertive” while it is still speaking. Use the spacebar, for the reason given in the polite case above.',
     hear: 'Speech is interrupted immediately by “Connection lost”.',
     not: 'The message waiting politely for the current sentence to end.',
     actions: [{ label: 'Announce assertive', run: () => announce('Connection lost', 'assertive') }]
@@ -219,7 +220,7 @@ const CASES = [
     title: 'The same message announced twice is spoken twice',
     do: 'Click “Announce” once, wait for it to finish, then click it again.',
     hear: '“Item added to cart” both times.',
-    not: 'Silence on the second click. Identical consecutive content can be treated as no change unless the region is cleared between messages.',
+    not: 'Silence on the second click. Writing the same string the region already holds is not a change, so it has to be emptied in one task and written back in another. Engines differ here: this case failed on Chromium while passing on WebKit and Gecko.',
     actions: [{ label: 'Announce', run: () => announce('Item added to cart') }]
   },
   {
