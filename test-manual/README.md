@@ -169,7 +169,8 @@ first write by 100ms; every later call is synchronous.
 | Shipped fix, two calls in one task | — | — | spoke, correct message |
 
 Tested with VoiceOver on macOS 26 (Safari 26, Chrome, Brave) and NVDA 2026.2
-with Chrome on Windows 11.
+with Chrome on Windows 11. The shipped 100ms fix is additionally confirmed on
+JAWS, which passes every case in the main harness.
 
 WebKit is the outlier. A macrotask is sufficient everywhere else, so shipping
 `setTimeout(0)` would have looked correct on two of the three pairings and been

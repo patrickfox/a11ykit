@@ -31,6 +31,9 @@ const CLEAR_DELAY = 500;
  * else, so shipping setTimeout(0) would have looked correct on two of the
  * three pairings and been silent in Safari.
  *
+ * The 100ms value is additionally confirmed on JAWS, which announces correctly
+ * across the manual harness.
+ *
  * A timeout is used rather than two animation frames because
  * requestAnimationFrame is paused in background and hidden tabs, where it may
  * never fire — an announcement that is never spoken is a worse failure than
