@@ -132,6 +132,13 @@ or assertive → polite. Two explanations fit:
 **Part 1** runs four sequences against the unchanged implementation.
 polite → polite is the deciding one.
 
+**Part 3** tackles a separate failure: announcing the same string twice in a row
+is silent on Chromium while working on WebKit and Gecko. It is not a missing DOM
+change — the region empties itself after 500ms, so the second write genuinely
+changes the content from empty to text. Something above the DOM suppresses text
+it just spoke. Each variant pre-registers the region so registration is not a
+factor, then asks only whether a second, identical announcement is heard.
+
 **Part 2** tests candidate fixes. The last variant, *Proposed fix — two calls in
 one task*, is the actual shape of the intended change rather than an isolated
 timing probe: lazy creation, a macrotask before the first write, and a one-slot
