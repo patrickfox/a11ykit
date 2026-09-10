@@ -18,6 +18,27 @@ A11yKit is a lightweight, JS accessibility (a11y) library that provides essentia
 - ⚡ **Lightweight** - Minimal footprint, no dependencies
 - ✅ **Well Tested** - Comprehensive Jest test suite, plus a manual screen reader harness
 
+## Tested with real screen readers
+
+Automated tests verify DOM state. They cannot tell you whether anything was
+actually *spoken* — which is where the interesting failures live. Every release
+is checked by hand against real assistive technology, using the harness in
+[`test-manual/`](test-manual/).
+
+| Screen reader | Browsers |
+|---|---|
+| VoiceOver (macOS 26) | Safari 26, Chrome, Brave |
+| NVDA 2026.2 (Windows 11) | Chrome |
+| JAWS (Windows 11) | Chrome |
+
+Each case states what to do, what you should hear, and the specific symptom that
+counts as a failure — so a result is a judgement about speech, not about markup.
+
+This matters because live region behaviour genuinely varies between screen
+readers and browser engines, in ways the DOM does not reveal. Testing one
+pairing is not enough to know a fix works, which is why the harness exists and
+why the timing values in the source were measured rather than chosen.
+
 ## Why does A11yKit exist?
 
 When auditing web sites for accessibility compliance, I often find well-meaning attempts to make the experience more accessible, but they are often ad-hoc, one-off fixes that clutter the HTML with unnecessary, redundant, and even detrimental code. Examples:
@@ -358,6 +379,27 @@ need the value, `watchReducedMotion()` when you want the class.
 **When you need neither:** CSS `@media (prefers-reduced-motion: reduce)` handles
 the majority of cases with no JavaScript at all. The class is for when you need
 to branch in JS, or want to avoid repeating the media query across many rules.
+
+## Changes
+
+See [CHANGELOG.md](CHANGELOG.md) for the full history, or the
+[releases page](https://github.com/patrickfox/a11ykit/releases).
+
+Two behaviours in `announce()` are worth knowing about, because both look odd if
+you inspect the DOM and neither is accidental:
+
+- **The first announcement of a page session waits 100ms.** Screen readers only
+  announce changes to a live region that was already in the accessibility tree,
+  so creating the region and writing to it in one go announces nothing at all.
+  Before this was fixed, the first `announce()` on any page was silently
+  dropped, and every later one worked — which made it a confusing bug to chase.
+- **A repeated message gets a trailing non-breaking space.** Screen readers
+  suppress text they have just spoken, independently of the DOM, so announcing
+  the same string twice was silent. The character is not spoken; it only makes
+  consecutive announcements textually distinct.
+
+Both values were measured across the screen readers listed above rather than
+guessed, and the reasoning is recorded in the source next to the constants.
 
 ## Development
 
