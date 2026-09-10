@@ -31,6 +31,9 @@ const CLEAR_DELAY = 500;
  * else, so shipping setTimeout(0) would have looked correct on two of the
  * three pairings and been silent in Safari.
  *
+ * The 100ms value is additionally confirmed on JAWS, which announces correctly
+ * across the manual harness.
+ *
  * A timeout is used rather than two animation frames because
  * requestAnimationFrame is paused in background and hidden tabs, where it may
  * never fire — an announcement that is never spoken is a worse failure than
@@ -46,8 +49,29 @@ const isValidManners = (value: any): value is Manners => {
   return value === 'polite' || value === 'assertive';
 };
 
+/**
+ * Appended to every other repeat of the same message, so two consecutive
+ * announcements are never the same string.
+ *
+ * Screen readers suppress text they have just spoken, independently of the DOM.
+ * The region empties itself 500ms after each announcement, so a later repeat is
+ * a genuine change from empty to text — and is still dropped. Nothing done to
+ * the DOM alone fixes it: measured on VoiceOver with Brave, writing the same
+ * string again, emptying and rewriting it on a later task, cycling aria-live
+ * off and back, and replacing the child node were all silent. Alternating two
+ * live regions appeared to work but only gives each region one pass before it
+ * hits the same suppression.
+ *
+ * A non-breaking space is used rather than a zero-width space, which was also
+ * measured and also silent — U+200B is treated as formatting and stripped from
+ * the accessible name, while U+00A0 counts as content. It is not spoken.
+ */
+const REPEAT_MARKER = '\u00a0';
+
 let clearTimer: number | null = null;
 let registrationTimer: number | null = null;
+let lastMessage: string | null = null;
+let markerApplied = false;
 let pending: { message: string; manners: Manners } | null = null;
 
 /**
@@ -57,13 +81,14 @@ let pending: { message: string; manners: Manners } | null = null;
  */
 let registered: HTMLElement | null = null;
 
-const writeMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
-  // Cycling through 'off' makes an identical consecutive message count as a
-  // change, so a repeated announcement is still spoken.
-  announcer.setAttribute('aria-live', 'off');
-  announcer.textContent = '';
+const applyMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
+  // Alternate, rather than always append: two repeats in a row would otherwise
+  // both end in the marker and be identical to each other again.
+  markerApplied = message === lastMessage ? !markerApplied : false;
+  lastMessage = message;
+
   announcer.setAttribute('aria-live', manners);
-  announcer.textContent = message;
+  announcer.textContent = markerApplied ? message + REPEAT_MARKER : message;
 
   if (clearTimer) {
     clearTimeout(clearTimer);
@@ -72,6 +97,10 @@ const writeMessage = (announcer: HTMLElement, message: string, manners: Manners)
     announcer.textContent = '';
     clearTimer = null;
   }, CLEAR_DELAY);
+};
+
+const writeMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
+  applyMessage(announcer, message, manners);
 };
 
 export const announce = (message: string, manners?: string): HTMLElement => {
@@ -90,6 +119,8 @@ export const announce = (message: string, manners?: string): HTMLElement => {
 
     registered = null;
     pending = null;
+    lastMessage = null;
+    markerApplied = false;
     if (registrationTimer) {
       clearTimeout(registrationTimer);
       registrationTimer = null;
