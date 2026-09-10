@@ -211,7 +211,7 @@ const CASES = [
     title: 'The same message announced twice is spoken twice',
     do: 'Click “Announce” once, wait for it to finish, then click it again.',
     hear: '“Item added to cart” both times.',
-    not: 'Silence on the second click. Identical consecutive content can be treated as no change unless the region is cleared between messages.',
+    not: 'Silence on the second click. Screen readers suppress text they have just spoken, independently of the DOM, so a repeat has to differ textually — announce() appends a non-breaking space to every other one.',
     actions: [{ label: 'Announce', run: () => announce('Item added to cart') }]
   },
   {

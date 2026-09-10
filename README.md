@@ -50,7 +50,7 @@ HTML page with no tooling at all.
 ```html
 <script type="module">
   import { access, announce, ariaHide, ariaUnhide, prefersReducedMotion }
-    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js';
+    from 'https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.1/dist/a11ykit.esm.js';
 
   announce('Settings saved');
 </script>
@@ -63,7 +63,7 @@ version means editing each one. An import map lets you declare it once:
 <script type="importmap">
 {
   "imports": {
-    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.esm.js"
+    "@a11yfox/a11ykit": "https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.1/dist/a11ykit.esm.js"
   }
 }
 </script>
@@ -84,7 +84,7 @@ For classic scripts, inline handlers, or anywhere `type="module"` is not an
 option:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.0/dist/a11ykit.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@a11yfox/a11ykit@1.1.1/dist/a11ykit.umd.min.js"></script>
 <script>
   A11yKit.announce('Settings saved');
 </script>
@@ -164,6 +164,13 @@ Announce any message to screen readers users
   Without that wait the first announcement is silently dropped. Every later
   call writes immediately. If several announcements are made before the region
   registers, the most recent one is spoken.
+- Appends a non-breaking space to every other repeat of the same message.
+  Screen readers suppress text they have just spoken, so announcing an
+  identical string twice is otherwise silent even after the region has emptied
+  itself. The character is not spoken; it only makes consecutive announcements
+  textually distinct. `announce()` returns the region, so note that its
+  `textContent` may carry that trailing character — compare with `.trim()` if
+  you assert on it.
 - Cancels previous announcements when new ones are made
 
 **Example:**
