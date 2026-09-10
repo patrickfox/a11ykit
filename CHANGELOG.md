@@ -15,8 +15,12 @@ the accessibility tree and the tab order in one step. The API is unchanged —
 same functions, same arguments — but assertions and CSS selectors targeting
 `aria-hidden` need updating. See [Migrating to 2.0](README.md#migrating-to-20).
 
-Browsers without `inert` (pre Chrome 102 / Firefox 112 / Safari 15.5) fall back
-to the 1.x implementation automatically.
+**`ariaHide()` now requires `inert`** (Chrome 102, Firefox 112, Safari 15.5 and
+later). On an older browser it warns once and does nothing. 2.0 does not carry
+the 1.x implementation as a fallback — that would mean every consumer paying for
+a code path duplicating a release line that already exists, and quietly serving
+some visitors the snapshot behaviour 2.0 exists to replace. If you need those
+browsers, stay on [1.1.1](#111--2026-09-10), which remains supported.
 
 ### Fixed
 

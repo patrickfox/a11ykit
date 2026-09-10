@@ -217,6 +217,12 @@ thing jsdom cannot establish.
 fixed: a synchronous clear-and-rewrite of the same string is not a mutation, so
 nothing was announced. Notably JAWS passed that case while VoiceOver failed it.
 
+## Browsers without inert
+
+2.0 requires `inert`. On an older browser `ariaHide()` warns once and does
+nothing, so cases 3.1 to 3.4 will fail there by design — that is the library
+telling you to use 1.1.x rather than silently leaving content reachable.
+
 ## Expected failures
 
 None. The *content added after hiding* case was the standing exception through

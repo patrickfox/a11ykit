@@ -226,13 +226,12 @@ Manage ARIA visibility to hide/show content from assistive technology.
   continuously by the browser
 - Writes no `tabindex` and no `data-ogti` — there is nothing to bookkeep
 - Leaves an element that is already `inert` untouched
-- Falls back to the pre-2.0 behaviour (`aria-hidden` plus per-element
-  `tabindex`) in browsers without `inert` support
+- **Requires `inert`** (Chrome 102, Firefox 112, Safari 15.5 and later). On an
+  older browser it warns once and does nothing — `1.1.x` still ships the
+  `aria-hidden` plus `tabindex` implementation if you need to support them
 
 **`ariaUnhide()` Behavior:**
 - Removes `inert`, but only if `ariaHide()` set it
-- Also reverses the fallback behaviour, so a subtree hidden by an older version
-  of the library is cleaned up correctly
 
 > **Changed in 2.0:** `ariaHide()` no longer sets `aria-hidden="true"` in
 > browsers that support `inert`. If you assert on `aria-hidden` in tests, see
@@ -540,6 +539,13 @@ will keep passing there, which means jsdom will not tell you whether your app
 is correct in a real browser. This library's own suite shims the property to
 test both paths; `tests/aria-hide.test.ts` shows how.
 
+**If you need to support browsers without `inert`**, stay on `1.1.x` and pin
+`"^1.1.1"`. 2.0 does not carry the old implementation as a fallback: it would
+mean every consumer paying for a code path that duplicates a release line which
+already exists, and quietly serving some visitors the snapshot behaviour that
+2.0 exists to replace. On an unsupported browser `ariaHide()` warns once, so the
+situation is visible rather than silent.
+
 **Everything else is unchanged.** If you only call `ariaHide()` and
 `ariaUnhide()` and never inspect the attributes they write, no change is needed.
 
@@ -563,8 +569,11 @@ continuously rather than at the moment you call the function.
 ## Browser Support
 
 - **ES Module builds**: Modern browsers with ES2020+ support (Chrome 80, Safari 13.1, Firefox 74 and later)
-- **`inert`**: Chrome 102, Firefox 112, Safari 15.5 and later. Older browsers
-  fall back to the 1.x `aria-hidden` + `tabindex` implementation automatically
+- **`ariaHide()` / `ariaUnhide()`**: require `inert` — Chrome 102, Firefox 112,
+  Safari 15.5 and later. On an older browser they warn once and do nothing.
+  [`1.1.x`](https://github.com/patrickfox/a11ykit/releases/tag/v1.1.1) still
+  ships the `aria-hidden` + `tabindex` implementation for those browsers, and
+  remains supported
 - **UMD builds**: All browsers supporting ES5+ (IE11+)
 - **TypeScript**: Full type definitions included
 - **Source maps**: Available for all builds
