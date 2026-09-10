@@ -28,6 +28,9 @@
   .sub { color: var(--muted); margin: 0; font-size: .95rem; }
   h2 { font-size: 1.15rem; margin: 2.5rem 0 .25rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
   h2 .sig { font-weight: 400; color: var(--muted); font-size: .85rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .group-num { display: inline-block; min-width: 1.6rem; font-weight: 700; color: var(--fg); }
+  .case-num { display: inline-block; min-width: 2.4rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+              font-weight: 700; color: var(--accent); }
   h3 { font-size: 1rem; margin: 0 0 .5rem; }
 
   fieldset.env { border: 1px solid var(--line); border-radius: 8px; margin: 1.25rem 0; padding: .75rem 1rem 1rem; background: var(--card); }
@@ -273,6 +276,46 @@ const CASES = [
   },
 
   {
+    id: 'access-native',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?, options?)',
+    title: 'A natively focusable element keeps its place in the tab order',
+    issue: 20,
+    do: 'Tab through the region and note the order. Click “Focus the button”, then Tab forward and back through the region again.',
+    hear: 'The same three stops in the same order. The middle button is still reachable by Tab.',
+    not: 'The button being skipped, or gaining a tabindex. It is already focusable, so access() should call focus() and leave it alone.',
+    sandbox: '<a href="#b1">Before</a> <button type="button" data-target>The target button</button> <a href="#b2">After</a>',
+    actions: [{ label: 'Focus the button', run: (sb) => access(sb.querySelector('[data-target]')) }]
+  },
+  {
+    id: 'access-preventscroll',
+    api: 'access',
+    group: 'access(element, placeFocusBefore?, options?)',
+    title: 'preventScroll focuses without scrolling the page',
+    issue: 20,
+    do: 'Click either button without scrolling first. The target sits far below the fold, so the two behave differently. Read the scroll position shown after each.',
+    hear: 'Nothing — this is a visual check, and a browser-level one. <strong>Screen reader cursors move independently of <code>focus()</code></strong>: VoiceOver will generally bring its cursor into view regardless, so judge this by the recorded scroll position, not by what the page looks like afterwards.',
+    not: 'Both buttons producing the same scroll position. That would mean the option is being ignored by the browser.',
+    note: 'This tests a browser API, not screen reader behaviour. preventScroll suppresses the scroll that focus() itself performs; it cannot stop assistive technology from scrolling its own cursor into view, and nothing in a library can.',
+    sandbox: '<p><strong>scrollY before → after:</strong> <span data-out>not run yet</span></p><div style="height:120vh;background:repeating-linear-gradient(var(--sandbox),var(--sandbox) 20px,transparent 20px,transparent 40px)"></div><h3 data-target>Focus target (far below the fold)</h3>',
+    actions: [
+      { label: 'Focus, preventScroll', run: (sb) => {
+          const before = Math.round(window.scrollY);
+          access(sb.querySelector('[data-target]'), undefined, { preventScroll: true });
+          sb.querySelector('[data-out]').textContent =
+            before + ' → ' + Math.round(window.scrollY) + '  (preventScroll: true)';
+      }},
+      { label: 'Focus, allow scroll', secondary: true, run: (sb) => {
+          window.scrollTo(0, 0);
+          const before = Math.round(window.scrollY);
+          access(sb.querySelector('[data-target]'));
+          sb.querySelector('[data-out]').textContent =
+            before + ' → ' + Math.round(window.scrollY) + '  (default)';
+      }},
+      { label: 'Reset scroll', secondary: true, run: () => window.scrollTo(0, 0) }
+    ]
+  },
+  {
     id: 'ariahide-basic',
     api: 'ariaHide',
     group: 'ariaHide(parent?) and ariaUnhide(parent?)',
@@ -342,46 +385,6 @@ const CASES = [
   },
 
   {
-    id: 'access-native',
-    api: 'access',
-    group: 'access(element, placeFocusBefore?, options?)',
-    title: 'A natively focusable element keeps its place in the tab order',
-    issue: 20,
-    do: 'Tab through the region and note the order. Click “Focus the button”, then Tab forward and back through the region again.',
-    hear: 'The same three stops in the same order. The middle button is still reachable by Tab.',
-    not: 'The button being skipped, or gaining a tabindex. It is already focusable, so access() should call focus() and leave it alone.',
-    sandbox: '<a href="#b1">Before</a> <button type="button" data-target>The target button</button> <a href="#b2">After</a>',
-    actions: [{ label: 'Focus the button', run: (sb) => access(sb.querySelector('[data-target]')) }]
-  },
-  {
-    id: 'access-preventscroll',
-    api: 'access',
-    group: 'access(element, placeFocusBefore?, options?)',
-    title: 'preventScroll focuses without scrolling the page',
-    issue: 20,
-    do: 'Click either button without scrolling first. The target sits far below the fold, so the two behave differently. Read the scroll position shown after each.',
-    hear: 'Nothing — this is a visual check, and a browser-level one. <strong>Screen reader cursors move independently of <code>focus()</code></strong>: VoiceOver will generally bring its cursor into view regardless, so judge this by the recorded scroll position, not by what the page looks like afterwards.',
-    not: 'Both buttons producing the same scroll position. That would mean the option is being ignored by the browser.',
-    note: 'This tests a browser API, not screen reader behaviour. preventScroll suppresses the scroll that focus() itself performs; it cannot stop assistive technology from scrolling its own cursor into view, and nothing in a library can.',
-    sandbox: '<p><strong>scrollY before → after:</strong> <span data-out>not run yet</span></p><div style="height:120vh;background:repeating-linear-gradient(var(--sandbox),var(--sandbox) 20px,transparent 20px,transparent 40px)"></div><h3 data-target>Focus target (far below the fold)</h3>',
-    actions: [
-      { label: 'Focus, preventScroll', run: (sb) => {
-          const before = Math.round(window.scrollY);
-          access(sb.querySelector('[data-target]'), undefined, { preventScroll: true });
-          sb.querySelector('[data-out]').textContent =
-            before + ' → ' + Math.round(window.scrollY) + '  (preventScroll: true)';
-      }},
-      { label: 'Focus, allow scroll', secondary: true, run: (sb) => {
-          window.scrollTo(0, 0);
-          const before = Math.round(window.scrollY);
-          access(sb.querySelector('[data-target]'));
-          sb.querySelector('[data-out]').textContent =
-            before + ' → ' + Math.round(window.scrollY) + '  (default)';
-      }},
-      { label: 'Reset scroll', secondary: true, run: () => window.scrollTo(0, 0) }
-    ]
-  },
-  {
     id: 'watch-prm',
     api: 'watchReducedMotion',
     group: 'watchReducedMotion(options?)',
@@ -442,14 +445,24 @@ const root = document.getElementById('cases');
 // rather than letting someone record a meaningless result.
 const announcerExisted = !!document.getElementById('announce-this');
 
+// Numbered by position rather than hand-assigned, so adding a case never means
+// renumbering the ones after it. Each API surface gets a major number and its
+// cases count up from .1.
 let currentGroup = null;
+let groupNumber = 0;
+let caseNumber = 0;
 for (const c of CASES) {
   if (c.group !== currentGroup) {
     currentGroup = c.group;
+    groupNumber += 1;
+    caseNumber = 0;
     const h2 = document.createElement('h2');
-    h2.innerHTML = `<span class="sig">${escapeHtml(currentGroup)}</span>`;
+    h2.innerHTML =
+      `<span class="group-num">${groupNumber}.</span> <span class="sig">${escapeHtml(currentGroup)}</span>`;
     root.append(h2);
   }
+  caseNumber += 1;
+  c.number = `${groupNumber}.${caseNumber}`;
   root.append(renderCase(c));
 }
 
@@ -463,7 +476,7 @@ function renderCase(c) {
 
   const issue = c.issue ? ` <a href="https://github.com/patrickfox/a11ykit/issues/${c.issue}">#${c.issue}</a>` : '';
   el.innerHTML = `
-    <h3>${escapeHtml(c.title)}${issue}</h3>
+    <h3><span class="case-num">${c.number}</span>${escapeHtml(c.title)}${issue}</h3>
     <dl class="spec">
       <dt class="do">Do</dt><dd>${escapeHtml(c.do)}</dd>
       <dt class="hear">Expect</dt><dd>${c.hear}</dd>
@@ -482,7 +495,7 @@ function renderCase(c) {
         <label><input type="radio" name="v-${c.id}" value="fail"> Fail</label>
         <label><input type="radio" name="v-${c.id}" value="na"> N/A</label>
         <input type="text" name="n-${c.id}" placeholder="Notes — what you actually heard"
-               aria-label="Notes for: ${escapeHtml(c.title)}">
+               aria-label="Notes for ${c.number}: ${escapeHtml(c.title)}">
       </div>
     </fieldset>`;
 
@@ -616,22 +629,22 @@ function buildReport() {
     `| A11yKit | ${lib} |`,
     `| Date | ${new Date().toISOString().slice(0, 10)} |`,
     ``,
-    `| Case | Result | Notes |`,
-    `|---|---|---|`
+    `| # | Case | Result | Notes |`,
+    `|---|---|---|---|`
   ];
   for (const c of CASES) {
     const r = results[c.id];
     const verdict = r?.verdict ? sym[r.verdict] : '⬜ not run';
     const notes = (r?.notes || '').replace(/\|/g, '\\|') || '—';
     const ref = c.issue ? ` (#${c.issue})` : '';
-    lines.push(`| ${c.title}${ref} | ${verdict} | ${notes} |`);
+    lines.push(`| ${c.number} | ${c.title}${ref} | ${verdict} | ${notes} |`);
   }
 
   const fails = CASES.filter((c) => results[c.id]?.verdict === 'fail');
   if (fails.length) {
     lines.push(``, `### Failures`, ``);
     for (const c of fails) {
-      lines.push(`- **${c.title}**${c.issue ? ` (#${c.issue})` : ''}`);
+      lines.push(`- **${c.number} — ${c.title}**${c.issue ? ` (#${c.issue})` : ''}`);
       lines.push(`  - Expected: ${stripTags(c.hear)}`);
       if (results[c.id].notes) lines.push(`  - Observed: ${results[c.id].notes}`);
     }

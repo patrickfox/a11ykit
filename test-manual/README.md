@@ -82,6 +82,11 @@ and it would not catch a packaging regression. As a side effect, this page is a
 live check on the no-build CDN path documented in the README: if the ESM bundle
 ever grows a bare specifier, the page stops loading.
 
+Cases are numbered by API surface — `1.x` for `announce()`, `2.x` for
+`access()`, and so on — so a result can be referred to by number rather than by
+quoting its title. The numbers come from position, not from anything written
+down, so inserting a case renumbers the ones after it rather than leaving a gap.
+
 Each case states three things:
 
 - **Do** — the action to take
@@ -236,8 +241,11 @@ what most of these cases exercise.
 
 ## Adding a case
 
-Add an entry to the `CASES` array in `index.html`. Every case needs an `api`
-field naming the export it exercises. `tests/harness-sync.test.ts` fails the
+Add an entry to the `CASES` array in `index.html`, **next to the other cases for
+the same API**. Numbering follows array order, so a case placed away from its
+group starts a second group with the same heading — which is how the duplicate
+`access` section was spotted. Every case needs an `api` field naming the export
+it exercises. `tests/harness-sync.test.ts` fails the
 build if a public export has no case, so a new function in `src/index.ts`
 cannot ship without one — that guard is what keeps this page from going stale.
 
