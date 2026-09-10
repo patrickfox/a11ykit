@@ -205,7 +205,8 @@ anyone revisits eager creation.
 ## 2.0 verification run
 
 VoiceOver with Brave 1.94 on macOS, against the 2.0.0 build. Every case in the
-main harness passes.
+main harness passes, re-confirmed after `ariaHide()` was simplified to require
+`inert` outright.
 
 The case worth calling out is *Content added after hiding is covered too*. It
 was written as a deliberate expected failure to make the `inert` migration

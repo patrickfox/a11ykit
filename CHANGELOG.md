@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] — 2026-09-10
 
+Verified by hand against VoiceOver, NVDA and JAWS before release. See
+[Tested with real screen readers](README.md#tested-with-real-screen-readers).
+
 ### ⚠️ Breaking
 
 **`ariaHide()` no longer sets `aria-hidden="true"`** in browsers that support
