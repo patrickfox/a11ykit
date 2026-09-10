@@ -45,11 +45,11 @@ When auditing web sites for accessibility compliance, I often find well-meaning 
 - Harcoded `tabindex` attributes on elements that should not be focusable
 - Overzealous and unmanageable use of `aria-live` that creates a broken experience
 
-I firmly believe that accessibility solutions should be simple and elegant, minimze code clutter (and potential for future issues), and rely on a foundation of semantic HTML and minimal  `aria-*` and `role` attributes to improve the accessible experience. A11yKit provides a set of tools that makes managing announcing important messages to SR users and managing focus easy and manageable.
+I firmly believe that accessibility solutions should be simple and elegant, minimize code clutter (and potential for future issues), and rely on a foundation of semantic HTML and minimal `aria-*` and `role` attributes to improve the accessible experience. A11yKit provides a set of tools that makes announcing important messages to screen reader users, and managing focus, easy and manageable.
 
 With that said - A11yKit is not a cure-all for your accessibility challenges.  While the goal of A11yKit is to make these techniques easier to manage, missuse can lead to an inaccessible experience. Use these functions minimally and with great care - and **always test your experiences using screen readers**.
 
-Questions? Thoughts? Submit a issue/question on the [A11yKit GitHub page](https://github.com/patrickfox/a11ykit/issues).
+Questions? Thoughts? Submit an issue/question on the [A11yKit GitHub page](https://github.com/patrickfox/a11ykit/issues).
 
 ## Getting Started
 
@@ -291,7 +291,7 @@ Properly managing ARIA states and focus trapping requires careful coordination o
 
 ### `prefersReducedMotion()`
 
-A utility function that 1) toggles a CSS class (`prm`) on the body tag based on the system's reduced motion setting, and 2) returns the the current reduced motion setting's value. The function also creates a change event listener that updates the `prm` class dynamically.
+A utility function that 1) toggles a CSS class (`prm`) on the body tag based on the system's reduced motion setting, and 2) returns the current reduced motion setting's value. The function also creates a change event listener that updates the `prm` class dynamically.
 
 **Type:** `() => boolean`
 
