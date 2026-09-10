@@ -18,6 +18,21 @@ same functions, same arguments — but assertions and CSS selectors targeting
 Browsers without `inert` (pre Chrome 102 / Firefox 112 / Safari 15.5) fall back
 to the 1.x implementation automatically.
 
+### Fixed
+
+- Announcing the same message twice in a row was silent. Screen readers
+  suppress text they have just spoken, independently of the DOM — the region
+  empties itself after 500ms, so the second write is a genuine change and was
+  dropped anyway. `announce()` now appends a non-breaking space to every other
+  repeat, which is not spoken but makes consecutive announcements textually
+  distinct. Measured on VoiceOver: rewriting the string, emptying and rewriting
+  it on a later task, cycling `aria-live`, and replacing the child node were
+  all silent; a zero-width space was silent too, being stripped from the
+  accessible name.
+
+  `announce()` returns the live region, so its `textContent` may carry that
+  trailing character. Compare with `.trim()` if you assert on it.
+
 ### Changed
 
 - `ariaHide()` and `ariaUnhide()` are built on native `inert` ([#16]). This

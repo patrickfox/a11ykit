@@ -50,18 +50,28 @@ const isValidManners = (value: any): value is Manners => {
 };
 
 /**
- * How long the region stays empty before a repeated message is written back.
+ * Appended to every other repeat of the same message, so two consecutive
+ * announcements are never the same string.
  *
- * A screen reader observes the DOM after a task completes, not during it, so a
- * synchronous clear-and-rewrite of the same string is not a mutation at all —
- * the end state is identical to the start state and nothing is announced. The
- * clear has to land in its own task to be seen.
+ * Screen readers suppress text they have just spoken, independently of the DOM.
+ * The region empties itself 500ms after each announcement, so a later repeat is
+ * a genuine change from empty to text — and is still dropped. Nothing done to
+ * the DOM alone fixes it: measured on VoiceOver with Brave, writing the same
+ * string again, emptying and rewriting it on a later task, cycling aria-live
+ * off and back, and replacing the child node were all silent. Alternating two
+ * live regions appeared to work but only gives each region one pass before it
+ * hits the same suppression.
+ *
+ * A non-breaking space is used rather than a zero-width space, which was also
+ * measured and also silent — U+200B is treated as formatting and stripped from
+ * the accessible name, while U+00A0 counts as content. It is not spoken.
  */
-const REPEAT_DELAY = 100;
+const REPEAT_MARKER = '\u00a0';
 
 let clearTimer: number | null = null;
 let registrationTimer: number | null = null;
-let repeatTimer: number | null = null;
+let lastMessage: string | null = null;
+let markerApplied = false;
 let pending: { message: string; manners: Manners } | null = null;
 
 /**
@@ -72,8 +82,13 @@ let pending: { message: string; manners: Manners } | null = null;
 let registered: HTMLElement | null = null;
 
 const applyMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
+  // Alternate, rather than always append: two repeats in a row would otherwise
+  // both end in the marker and be identical to each other again.
+  markerApplied = message === lastMessage ? !markerApplied : false;
+  lastMessage = message;
+
   announcer.setAttribute('aria-live', manners);
-  announcer.textContent = message;
+  announcer.textContent = markerApplied ? message + REPEAT_MARKER : message;
 
   if (clearTimer) {
     clearTimeout(clearTimer);
@@ -85,33 +100,6 @@ const applyMessage = (announcer: HTMLElement, message: string, manners: Manners)
 };
 
 const writeMessage = (announcer: HTMLElement, message: string, manners: Manners): void => {
-  if (repeatTimer) {
-    clearTimeout(repeatTimer);
-    repeatTimer = null;
-  }
-
-  // Writing the same string the region already holds is not a change, so the
-  // announcement is dropped. Empty it now and write back on a later task, which
-  // the screen reader sees as two distinct mutations.
-  //
-  // aria-live is deliberately left alone here. Setting it to 'off' would tell
-  // the screen reader to stop watching the region, and turning it back on in
-  // the next task forces the same re-registration that makes a first
-  // announcement silent. In 1.x that toggle was harmless only because the whole
-  // cycle was coalesced into one task and never observed.
-  if (announcer.textContent === message) {
-    announcer.textContent = '';
-
-    repeatTimer = window.setTimeout(() => {
-      repeatTimer = null;
-      const el = document.getElementById(ANNOUNCER_ID) as HTMLElement | null;
-      if (el) {
-        applyMessage(el, message, manners);
-      }
-    }, REPEAT_DELAY);
-    return;
-  }
-
   applyMessage(announcer, message, manners);
 };
 
@@ -131,10 +119,8 @@ export const announce = (message: string, manners?: string): HTMLElement => {
 
     registered = null;
     pending = null;
-    if (repeatTimer) {
-      clearTimeout(repeatTimer);
-      repeatTimer = null;
-    }
+    lastMessage = null;
+    markerApplied = false;
     if (registrationTimer) {
       clearTimeout(registrationTimer);
       registrationTimer = null;

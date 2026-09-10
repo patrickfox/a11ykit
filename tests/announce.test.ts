@@ -297,31 +297,37 @@ describe('announce function', () => {
       expect(replacement.textContent).toBe('After teardown');
     });
 
-    test('an identical repeat empties the region before writing it back', () => {
-      // A synchronous clear-and-rewrite of the same string is not a mutation:
-      // the end state matches the start state, so nothing is announced. The
-      // clear has to land in its own task to be observed.
+    const MARKER = '\u00a0';
+
+    test('a repeated message is never the same string twice running', () => {
+      // Screen readers suppress text they have just spoken, independently of
+      // the DOM — so the repeat has to differ textually, not just be re-written.
       announce('Item added to cart');
       flushRegistration();
       const announcer = document.getElementById('announce-this')!;
       expect(announcer.textContent).toBe('Item added to cart');
 
       announce('Item added to cart');
+      expect(announcer.textContent).toBe('Item added to cart' + MARKER);
 
-      // Emptied now, but still a live region: switching it off here would
-      // deregister it, and turning it back on next task reintroduces the
-      // registration delay that makes a first announcement silent.
-      expect(announcer.textContent).toBe('');
-      expect(announcer.getAttribute('aria-live')).toBe('polite');
-
-      // ...and written back on a later task.
-      jest.advanceTimersByTime(100);
+      // Alternating, not accumulating: a third repeat must differ from the
+      // second, which means dropping the marker again rather than adding one.
+      announce('Item added to cart');
       expect(announcer.textContent).toBe('Item added to cart');
-      expect(announcer.getAttribute('aria-live')).toBe('polite');
     });
 
-    test('a different message is written immediately', () => {
-      // Only an identical repeat needs the round trip.
+    test('the marker is a single non-breaking space, and is not visible text', () => {
+      announce('Saved');
+      flushRegistration();
+      announce('Saved');
+
+      const announcer = document.getElementById('announce-this')!;
+      expect(announcer.textContent).toBe('Saved' + MARKER);
+      // Trimmed, it is the message the caller passed.
+      expect(announcer.textContent!.trim()).toBe('Saved');
+    });
+
+    test('a different message is written plainly', () => {
       announce('First');
       flushRegistration();
       const announcer = document.getElementById('announce-this')!;
@@ -331,31 +337,42 @@ describe('announce function', () => {
       expect(announcer.textContent).toBe('Second');
     });
 
-    test('an identical repeat honours a changed manner', () => {
+    test('a different message resets the alternation', () => {
+      announce('A');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
+
+      announce('A');
+      expect(announcer.textContent).toBe('A' + MARKER);
+
+      announce('B');
+      expect(announcer.textContent).toBe('B');
+
+      // Back to A: a fresh message, so no marker.
+      announce('A');
+      expect(announcer.textContent).toBe('A');
+    });
+
+    test('a repeat still applies a changed manner', () => {
       announce('Connection lost');
       flushRegistration();
       const announcer = document.getElementById('announce-this')!;
 
       announce('Connection lost', 'assertive');
-      jest.advanceTimersByTime(100);
 
-      expect(announcer.textContent).toBe('Connection lost');
+      expect(announcer.textContent).toBe('Connection lost' + MARKER);
       expect(announcer.getAttribute('aria-live')).toBe('assertive');
     });
 
-    test('a third message during a pending repeat wins', () => {
-      announce('Same');
+    test('a repeat is written immediately, with no added delay', () => {
+      announce('Saved');
       flushRegistration();
       const announcer = document.getElementById('announce-this')!;
 
-      announce('Same');            // schedules the write-back
-      announce('Something else');  // supersedes it
+      announce('Saved');
 
-      expect(announcer.textContent).toBe('Something else');
-
-      // The superseded write-back must not fire and clobber it.
-      jest.advanceTimersByTime(100);
-      expect(announcer.textContent).toBe('Something else');
+      // Nothing to wait for — the text already differs.
+      expect(announcer.textContent).toBe('Saved' + MARKER);
     });
 
     test('a repeat still clears itself after the usual delay', () => {
@@ -364,11 +381,23 @@ describe('announce function', () => {
       const announcer = document.getElementById('announce-this')!;
 
       announce('Saved');
-      jest.advanceTimersByTime(100);
-      expect(announcer.textContent).toBe('Saved');
+      jest.advanceTimersByTime(500);
+
+      expect(announcer.textContent).toBe('');
+    });
+
+    test('a repeat after the region has emptied still differs', () => {
+      // The case that failed in the wild: the auto-clear runs, so the second
+      // write is a real DOM change — and was still suppressed.
+      announce('Item added to cart');
+      flushRegistration();
+      const announcer = document.getElementById('announce-this')!;
 
       jest.advanceTimersByTime(500);
       expect(announcer.textContent).toBe('');
+
+      announce('Item added to cart');
+      expect(announcer.textContent).toBe('Item added to cart' + MARKER);
     });
 
     test('restarts the delay if the region is replaced mid-wait', () => {

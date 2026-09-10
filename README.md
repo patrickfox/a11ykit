@@ -164,6 +164,13 @@ Announce any message to screen readers users
   Without that wait the first announcement is silently dropped. Every later
   call writes immediately. If several announcements are made before the region
   registers, the most recent one is spoken.
+- Appends a non-breaking space to every other repeat of the same message.
+  Screen readers suppress text they have just spoken, so announcing an
+  identical string twice is otherwise silent even after the region has emptied
+  itself. The character is not spoken; it only makes consecutive announcements
+  textually distinct. `announce()` returns the region, so note that its
+  `textContent` may carry that trailing character — compare with `.trim()` if
+  you assert on it.
 - Cancels previous announcements when new ones are made
 
 **Example:**
