@@ -5,6 +5,37 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] — 2026-09-10
+
+Verified by hand against VoiceOver, NVDA and JAWS before release. See
+[Tested with real screen readers](README.md#tested-with-real-screen-readers).
+
+### ⚠️ Breaking
+
+**`ariaHide()` no longer sets `aria-hidden="true"`** in browsers that support
+`inert`. It sets the `inert` attribute instead, which removes the subtree from
+the accessibility tree and the tab order in one step. The API is unchanged —
+same functions, same arguments — but assertions and CSS selectors targeting
+`aria-hidden` need updating. See [Migrating to 2.0](README.md#migrating-to-20).
+
+**`ariaHide()` now requires `inert`** (Chrome 102, Firefox 112, Safari 15.5 and
+later). On an older browser it warns once and does nothing. 2.0 does not carry
+the 1.x implementation as a fallback — that would mean every consumer paying for
+a code path duplicating a release line that already exists, and quietly serving
+some visitors the snapshot behaviour 2.0 exists to replace. If you need those
+browsers, stay on [1.1.1](#111--2026-09-10), which remains supported.
+
+### Fixed
+
+- Announcing the same message twice in a row was silent. Screen readers
+  suppress text they have just spoken, independently of the DOM — the region
+  empties itself after 500ms, so the second write is a genuine change and was
+  dropped anyway. `announce()` now appends a non-breaking space to every other
+  repeat, which is not spoken but makes consecutive announcements textually
+  distinct. Measured on VoiceOver: rewriting the string, emptying and rewriting
+  it on a later task, cycling `aria-live`, and replacing the child node were
+  all silent; a zero-width space was silent too, being stripped from the
+  accessible name.
 ## [1.1.1] — 2026-09-10
 
 The final 1.x release. Backports the repeated-announcement fix from 2.0 so it is
@@ -25,6 +56,28 @@ available without the breaking `inert` change. Nothing else differs from 1.1.0.
   `announce()` returns the live region, so its `textContent` may carry that
   trailing character. Compare with `.trim()` if you assert on it.
 
+### Changed
+
+- `ariaHide()` and `ariaUnhide()` are built on native `inert` ([#16]). This
+  fixes two limitations that could not be solved in the previous approach:
+  - Content rendered into the subtree **after** `ariaHide()` was called stayed
+    fully tabbable while sitting under `aria-hidden="true"`. Async-rendered
+    modal content hit this routinely. The browser now enforces `inert`
+    continuously.
+  - `querySelectorAll` does not descend into shadow roots, so web components
+    kept their focusable children in the tab order. Shadow DOM is now covered.
+- `ariaHide()` writes no `tabindex` or `data-ogti` on descendants. There is no
+  bookkeeping to corrupt.
+- An element that is already `inert` is left alone, and `ariaUnhide()` clears
+  `inert` only when `ariaHide()` set it.
+
+### Note for jsdom users
+
+jsdom does not implement `inert` — the property is absent from
+`HTMLElement.prototype` — so the library detects no support and takes the 1.x
+fallback path there. Existing `aria-hidden` assertions will keep passing in
+jsdom, which means jsdom cannot tell you whether your app is correct in a real
+browser. This library's own suite shims the property to test both paths.
 ### Upgrading
 
 Staying on 1.x is fine — pin `"^1.1.1"`. 2.0 changes `ariaHide()` to use native
@@ -142,6 +195,7 @@ fire at all. JAWS is not yet tested.
 - Split into modules and added a rollup build.
 - Added automated testing.
 
+[2.0.0]: https://github.com/patrickfox/a11ykit/releases/tag/v2.0.0
 [1.1.1]: https://github.com/patrickfox/a11ykit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/patrickfox/a11ykit/releases/tag/v1.1.0
 [1.0.5]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.5
@@ -149,6 +203,7 @@ fire at all. JAWS is not yet tested.
 [1.0.3]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.3
 [1.0.2]: https://github.com/patrickfox/a11ykit/releases/tag/v1.0.2
 [#12]: https://github.com/patrickfox/a11ykit/issues/12
+[#16]: https://github.com/patrickfox/a11ykit/issues/16
 [#13]: https://github.com/patrickfox/a11ykit/issues/13
 [#14]: https://github.com/patrickfox/a11ykit/issues/14
 [#15]: https://github.com/patrickfox/a11ykit/issues/15

@@ -158,6 +158,24 @@ aria-live change the AT re-registers when aria-live changes value.
     </tr></thead><tbody></tbody></table>
   </section>
 
+  <section>
+    <h2>Part 3 — Why is a repeated message dropped?</h2>
+    <p style="font-size:.93rem">
+      Announcing the same string twice in a row is silent on Chromium, while working
+      on WebKit and Gecko. It is <strong>not</strong> a missing DOM change: the region
+      empties itself after 500ms, so the second write genuinely changes the content
+      from empty to text. Something above the DOM is suppressing text it just spoke.
+    </p>
+    <p style="font-size:.93rem">
+      Each variant below pre-registers the region at load, so registration is not a
+      factor. <strong>Click “Announce” twice</strong>, with a pause between, and record
+      whether the second one spoke.
+    </p>
+    <table id="t-part3"><thead><tr>
+      <th>Strategy</th><th>2nd announcement</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
   <div id="active"></div>
 </main>
 
@@ -368,6 +386,87 @@ aria-live change the AT re-registers when aria-live changes value.
   ];
 
   /* ---------------------------------------------------------------- *
+   * Part 3 — repeating the same message.
+   *
+   * Every variant starts from a region that is already registered, so the
+   * only question is what makes a screen reader speak the same string twice.
+   * ---------------------------------------------------------------- */
+  var REPEAT_MESSAGE = 'Item added to cart';
+
+  var REPEATS = [
+    {
+      id: 'r-plain', label: 'Baseline — write the same string again',
+      mech: 'region already registered\non click: textContent = "Item added to cart"',
+      setup: function () { return makeRegion('announce-this', 'polite'); },
+      run: function (region) { region.textContent = REPEAT_MESSAGE; }
+    },
+    {
+      id: 'r-clear', label: 'Empty it, write back next task (currently shipped)',
+      mech: 'on click: textContent = ""\n  then 100ms later: textContent = message',
+      setup: function () { return makeRegion('announce-this', 'polite'); },
+      run: function (region) {
+        region.textContent = '';
+        window.setTimeout(function () { region.textContent = REPEAT_MESSAGE; }, 100);
+      }
+    },
+    {
+      id: 'r-nbsp', label: 'Alternate a trailing non-breaking space',
+      mech: 'on click: alternate between "message" and "message\u00a0"\nthe text differs each time; the extra character is not spoken',
+      setup: function () { return makeRegion('announce-this', 'polite'); },
+      run: function (region) {
+        region._alt = !region._alt;
+        region.textContent = region._alt ? REPEAT_MESSAGE + '\u00a0' : REPEAT_MESSAGE;
+      }
+    },
+    {
+      id: 'r-zwsp', label: 'Alternate a trailing zero-width space',
+      mech: 'as above, but with \u200b — invisible and zero-width,\nso it survives whitespace normalisation',
+      setup: function () { return makeRegion('announce-this', 'polite'); },
+      run: function (region) {
+        region._alt = !region._alt;
+        region.textContent = region._alt ? REPEAT_MESSAGE + '\u200b' : REPEAT_MESSAGE;
+      }
+    },
+    {
+      id: 'r-swap', label: 'Alternate between two live regions',
+      mech: 'two polite regions created at load\non click: write to whichever one is not currently holding the message',
+      setup: function () {
+        makeRegion('announce-a', 'polite');
+        makeRegion('announce-b', 'polite');
+        return getRegion('announce-a');
+      },
+      run: function () {
+        var a = getRegion('announce-a');
+        var b = getRegion('announce-b');
+        if (a.textContent) { a.textContent = ''; b.textContent = REPEAT_MESSAGE; }
+        else { b.textContent = ''; a.textContent = REPEAT_MESSAGE; }
+      }
+    },
+    {
+      id: 'r-live', label: 'Cycle aria-live off and back across tasks',
+      mech: 'on click: aria-live = "off", textContent = ""\n  then 100ms later: aria-live = "polite", textContent = message',
+      setup: function () { return makeRegion('announce-this', 'polite'); },
+      run: function (region) {
+        region.setAttribute('aria-live', 'off');
+        region.textContent = '';
+        window.setTimeout(function () {
+          region.setAttribute('aria-live', 'polite');
+          region.textContent = REPEAT_MESSAGE;
+        }, 100);
+      }
+    },
+    {
+      id: 'r-node', label: 'Replace the child node rather than the text',
+      mech: 'on click: remove the existing child and append a fresh\ntext node, so the mutation is structural',
+      setup: function () { return makeRegion('announce-this', 'polite'); },
+      run: function (region) {
+        while (region.firstChild) { region.removeChild(region.firstChild); }
+        region.appendChild(document.createTextNode(REPEAT_MESSAGE));
+      }
+    }
+  ];
+
+  /* ---------------------------------------------------------------- *
    * Persistence
    * ---------------------------------------------------------------- */
   function load() {
@@ -515,6 +614,63 @@ aria-live change the AT re-registers when aria-live changes value.
     return box;
   }
 
+  function renderPart3() {
+    var body = document.querySelector('#t-part3 tbody');
+    body.textContent = '';
+    REPEATS.forEach(function (r) {
+      var saved = results[r.id] || {};
+      var tr = document.createElement('tr');
+      if (r.id === activeId) tr.className = 'current';
+
+      var name = document.createElement('td');
+      name.textContent = r.label;
+      tr.appendChild(name);
+      tr.appendChild(verdictCell(saved.spoke));
+
+      var act = document.createElement('td');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'secondary';
+      b.textContent = r.id === activeId ? 'running' : 'run';
+      b.disabled = r.id === activeId;
+      b.addEventListener('click', function () { goTo(r.id); });
+      act.appendChild(b);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderRepeat(variant) {
+    var saved = results[variant.id] || {};
+    var region = variant.setup();
+
+    return panel(variant.label, variant.mech, function () {
+      var steps = document.createElement('div');
+      steps.className = 'steps';
+      var count = 0;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = 'Announce (click twice)';
+      var tally = document.createElement('span');
+      tally.style.fontSize = '.85rem';
+      tally.style.color = 'var(--muted)';
+      tally.textContent = '0 announcements';
+      b.addEventListener('click', function () {
+        variant.run(region);
+        count += 1;
+        tally.textContent = count + ' announcement' + (count === 1 ? '' : 's');
+      });
+      steps.appendChild(b);
+      steps.appendChild(tally);
+      return steps;
+    }, function (fs) {
+      fs.appendChild(radioGroup('qr', 'The second announcement:', saved.spoke, function (v) {
+        results[variant.id] = { spoke: v };
+        save(results); renderPart3();
+      }));
+    });
+  }
+
   function renderActive() {
     var host = document.getElementById('active');
     host.textContent = '';
@@ -533,6 +689,9 @@ aria-live change the AT re-registers when aria-live changes value.
 
     var variant = VARIANTS.filter(function (v) { return v.id === activeId; })[0];
     if (variant) return host.appendChild(renderVariant(variant));
+
+    var repeat = REPEATS.filter(function (r) { return r.id === activeId; })[0];
+    if (repeat) return host.appendChild(renderRepeat(repeat));
 
     host.textContent = 'Unknown test: ' + activeId;
   }
@@ -659,6 +818,19 @@ aria-live change the AT re-registers when aria-live changes value.
       out.push('| ' + v.label + ' | ' + (v.sideEffectFree ? 'yes' : 'no') + ' | ' + mark(r.spoke) + ' |');
     });
 
+    out.push('', '### Part 3 — repeating the same message', '');
+    out.push('| Strategy | 2nd announcement |', '|---|---|');
+    REPEATS.forEach(function (r) {
+      out.push('| ' + r.label + ' | ' + mark((results[r.id] || {}).spoke) + ' |');
+    });
+    var repeatWinners = REPEATS.filter(function (r) {
+      return (results[r.id] || {}).spoke === 'yes';
+    });
+    if (repeatWinners.length) {
+      out.push('', '**Repeats work with:** ' +
+        repeatWinners.map(function (r) { return r.label; }).join(', '));
+    }
+
     var winners = VARIANTS.filter(function (v) {
       var r = (results[v.id] || {}).spoke;
       return r === 'yes' || r === 'second';
@@ -694,6 +866,7 @@ aria-live change the AT re-registers when aria-live changes value.
 
   renderPart1();
   renderPart2();
+  renderPart3();
   renderActive();
 })();
 </script>

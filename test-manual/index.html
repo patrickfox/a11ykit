@@ -28,6 +28,9 @@
   .sub { color: var(--muted); margin: 0; font-size: .95rem; }
   h2 { font-size: 1.15rem; margin: 2.5rem 0 .25rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
   h2 .sig { font-weight: 400; color: var(--muted); font-size: .85rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .group-num { display: inline-block; min-width: 1.6rem; font-weight: 700; color: var(--fg); }
+  .case-num { display: inline-block; min-width: 2.4rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+              font-weight: 700; color: var(--accent); }
   h3 { font-size: 1rem; margin: 0 0 .5rem; }
 
   fieldset.env { border: 1px solid var(--line); border-radius: 8px; margin: 1.25rem 0; padding: .75rem 1rem 1rem; background: var(--card); }
@@ -85,6 +88,14 @@
          background: var(--sandbox); padding: .1em .35em; border-radius: 3px; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
                      overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+
+  /* The reduced-motion case needs a visible effect, or the only way to verify
+     it is to open DevTools and watch the class list. */
+  .rm-target { padding: .6rem; border: 2px solid var(--line); border-radius: 6px;
+               background: var(--sandbox); animation: rm-pulse 1.4s ease-in-out infinite; }
+  .rm-target.rm-demo { animation: none; border-color: var(--pass); background: var(--card);
+                       outline: 2px solid var(--pass); outline-offset: 2px; }
+  @keyframes rm-pulse { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
   #load-error { display: none; border: 2px solid var(--fail); color: var(--fail);
                 border-radius: 8px; padding: 1rem; margin: 1.5rem 0; }
 </style>
@@ -176,9 +187,10 @@ const CASES = [
     api: 'announce',
     group: 'announce(message, manners?)',
     title: 'Polite announcement does not interrupt',
-    do: 'Start reading this paragraph with your screen reader, then click “Announce polite” while it is still speaking.',
+    do: 'Start your screen reader reading this paragraph, then activate “Announce polite” <strong>while it is still speaking</strong>. Activate with the spacebar rather than a screen reader pass-through command — see the note.',
     hear: 'The current sentence finishes first, then “Settings saved”.',
     not: 'The message cutting off what was being read.',
+    note: 'Polite only means “wait for the current utterance to finish”. If nothing is being spoken at the moment the region updates, polite and assertive are indistinguishable — so this case is only meaningful while speech is actually in flight. That is also why the activation method matters: VoiceOver’s own activate command (Control+Option+Space) speaks its own feedback and flushes the speech queue, leaving nothing for a polite message to wait behind, so it can look assertive. Plain spacebar on a native button activates it through the browser without that flush.',
     actions: [{ label: 'Announce polite', run: () => announce('Settings saved','polite') }]
   },
   {
@@ -186,7 +198,7 @@ const CASES = [
     api: 'announce',
     group: 'announce(message, manners?)',
     title: 'Assertive announcement interrupts',
-    do: 'Start reading this paragraph, then click “Announce assertive” while it is still speaking.',
+    do: 'Start reading this paragraph, then activate “Announce assertive” while it is still speaking. Use the spacebar, for the reason given in the polite case above.',
     hear: 'Speech is interrupted immediately by “Connection lost”.',
     not: 'The message waiting politely for the current sentence to end.',
     actions: [{ label: 'Announce assertive', run: () => announce('Connection lost', 'assertive') }]
@@ -211,7 +223,7 @@ const CASES = [
     title: 'The same message announced twice is spoken twice',
     do: 'Click “Announce” once, wait for it to finish, then click it again.',
     hear: '“Item added to cart” both times.',
-    not: 'Silence on the second click. Screen readers suppress text they have just spoken, independently of the DOM, so a repeat has to differ textually — announce() appends a non-breaking space to every other one.',
+    not: 'Silence on the second click. Screen readers suppress text they have just spoken, independently of the DOM, so a repeat has to differ textually — announce() appends a non-breaking space to every other one. This case failed on Chromium until that landed.',
     actions: [{ label: 'Announce', run: () => announce('Item added to cart') }]
   },
   {
@@ -264,75 +276,6 @@ const CASES = [
   },
 
   {
-    id: 'ariahide-basic',
-    api: 'ariaHide',
-    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
-    title: 'Hidden content is unreachable by both virtual cursor and Tab',
-    do: 'Click “Hide”. Then browse the region below with your virtual cursor, and separately Tab through it.',
-    hear: 'Nothing from inside the region — no text, no link, no button, no field.',
-    not: 'Any of the content still being reachable. Reaching it by Tab but not the virtual cursor means aria-hidden applied but the tab order did not.',
-    sandbox: '<p>Promotional banner text.</p><a href="#promo">A link</a> <button type="button">A button</button> <input aria-label="Email" placeholder="Email">',
-    actions: [
-      { label: 'Hide', run: (sb) => ariaHide(sb) },
-      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
-    ]
-  },
-  {
-    id: 'ariaunhide-restore',
-    api: 'ariaUnhide',
-    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
-    title: 'Unhiding restores the original tab order exactly',
-    issue: 12,
-    do: 'Tab through the region and note the order. Click “Hide”, then “Unhide”, then Tab through again.',
-    hear: 'The same three stops in the same order as before, including the field with an explicit tabindex.',
-    not: 'A control that is now skipped. That is the nested-backup bug: an element left permanently at tabindex="-1".',
-    sandbox: '<a href="#a">First</a> <button type="button">Second</button> <input aria-label="Third" tabindex="0" placeholder="Third">',
-    actions: [
-      { label: 'Hide', run: (sb) => ariaHide(sb) },
-      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
-    ]
-  },
-  {
-    id: 'ariahide-nested',
-    api: 'ariaHide',
-    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
-    title: 'Nested hide and unhide leaves the tab order intact',
-    issue: 12,
-    do: 'Tab through and note the order. Click “Hide inner”, “Hide outer”, “Unhide outer”, “Unhide inner”, then Tab through again.',
-    hear: 'Both controls reachable again, in the original order.',
-    not: 'The inner link permanently skipped — the failure this sequence reproduced before the fix.',
-    sandbox: '<div data-inner style="padding:.4rem;border:1px dotted var(--line)"><a href="#n">Inner link</a></div><button type="button">Outer button</button>',
-    actions: [
-      { label: 'Hide inner', run: (sb) => ariaHide(sb.querySelector('[data-inner]')) },
-      { label: 'Hide outer', run: (sb) => ariaHide(sb) },
-      { label: 'Unhide outer', secondary: true, run: (sb) => ariaUnhide(sb) },
-      { label: 'Unhide inner', secondary: true, run: (sb) => ariaUnhide(sb.querySelector('[data-inner]')) }
-    ]
-  },
-  {
-    id: 'ariahide-async',
-    api: 'ariaHide',
-    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
-    title: 'Known limitation: content added after hiding stays in the tab order',
-    issue: 16,
-    do: 'Click “Hide”, then “Add a button”, then Tab through the region.',
-    hear: 'The new button is still reachable by Tab, even though the region is hidden.',
-    not: 'Nothing — this case is expected to FAIL today. ariaHide() takes a one-time snapshot. Record it as a fail; native inert in 2.0.0 is what fixes it.',
-    note: 'Documented limitation, not a regression. This case exists to make the 2.0.0 inert migration measurable — it should flip to pass with no other change.',
-    sandbox: '<p>Region content.</p><button type="button">Original button</button> <span data-slot></span>',
-    actions: [
-      { label: 'Hide', run: (sb) => ariaHide(sb) },
-      { label: 'Add a button', run: (sb) => {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.textContent = 'Added after hiding';
-          sb.querySelector('[data-slot]').append(' ', b);
-      }},
-      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
-    ]
-  },
-
-  {
     id: 'access-native',
     api: 'access',
     group: 'access(element, placeFocusBefore?, options?)',
@@ -350,26 +293,108 @@ const CASES = [
     group: 'access(element, placeFocusBefore?, options?)',
     title: 'preventScroll focuses without scrolling the page',
     issue: 20,
-    do: 'Scroll so this region is near the top of the window. Click “Focus, no scroll”, then “Focus, with scroll”.',
-    hear: 'Both announce the heading. The first must not move the page; the second may scroll it into view.',
-    not: 'The page jumping on the first button. That is the option being ignored.',
-    sandbox: '<h3 data-target>Focus target</h3><p>Watch the scroll position, not the announcement.</p>',
+    do: 'Click either button without scrolling first. The target sits far below the fold, so the two behave differently. Read the scroll position shown after each.',
+    hear: 'Nothing — this is a visual check, and a browser-level one. <strong>Screen reader cursors move independently of <code>focus()</code></strong>: VoiceOver will generally bring its cursor into view regardless, so judge this by the recorded scroll position, not by what the page looks like afterwards.',
+    not: 'Both buttons producing the same scroll position. That would mean the option is being ignored by the browser.',
+    note: 'This tests a browser API, not screen reader behaviour. preventScroll suppresses the scroll that focus() itself performs; it cannot stop assistive technology from scrolling its own cursor into view, and nothing in a library can.',
+    sandbox: '<p><strong>scrollY before → after:</strong> <span data-out>not run yet</span></p><div style="height:120vh;background:repeating-linear-gradient(var(--sandbox),var(--sandbox) 20px,transparent 20px,transparent 40px)"></div><h3 data-target>Focus target (far below the fold)</h3>',
     actions: [
-      { label: 'Focus, no scroll', run: (sb) => access(sb.querySelector('[data-target]'), undefined, { preventScroll: true }) },
-      { label: 'Focus, with scroll', secondary: true, run: (sb) => access(sb.querySelector('[data-target]')) }
+      { label: 'Focus, preventScroll', run: (sb) => {
+          const before = Math.round(window.scrollY);
+          access(sb.querySelector('[data-target]'), undefined, { preventScroll: true });
+          sb.querySelector('[data-out]').textContent =
+            before + ' → ' + Math.round(window.scrollY) + '  (preventScroll: true)';
+      }},
+      { label: 'Focus, allow scroll', secondary: true, run: (sb) => {
+          window.scrollTo(0, 0);
+          const before = Math.round(window.scrollY);
+          access(sb.querySelector('[data-target]'));
+          sb.querySelector('[data-out]').textContent =
+            before + ' → ' + Math.round(window.scrollY) + '  (default)';
+      }},
+      { label: 'Reset scroll', secondary: true, run: () => window.scrollTo(0, 0) }
     ]
   },
+  {
+    id: 'ariahide-basic',
+    api: 'ariaHide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Hidden content is unreachable by both virtual cursor and Tab',
+    do: 'Click “Hide”. Then browse the region below with your virtual cursor, and separately Tab through it.',
+    hear: 'Nothing from inside the region — no text, no link, no button, no field.',
+    not: 'Any of the content still being reachable, by either route. In 2.0 this is a single inert attribute rather than aria-hidden plus per-element tabindex, so a partial failure is unlikely — but reaching content by one route and not the other would mean inert is not being enforced.',
+    sandbox: '<p>Promotional banner text.</p><a href="#promo">A link</a> <button type="button">A button</button> <input aria-label="Email" placeholder="Email">',
+    actions: [
+      { label: 'Hide', run: (sb) => ariaHide(sb) },
+      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
+    ]
+  },
+  {
+    id: 'ariaunhide-restore',
+    api: 'ariaUnhide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Unhiding restores the original tab order exactly',
+    issue: 12,
+    do: 'Tab through the region and note the order. Click “Hide”, then “Unhide”, then Tab through again.',
+    hear: 'The same three stops in the same order as before, including the field with an explicit tabindex.',
+    not: 'A control that is now skipped. Under inert nothing per-element is written, so the tab order should return exactly as it was; a missing stop would mean inert was not fully cleared.',
+    sandbox: '<a href="#a">First</a> <button type="button">Second</button> <input aria-label="Third" tabindex="0" placeholder="Third">',
+    actions: [
+      { label: 'Hide', run: (sb) => ariaHide(sb) },
+      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
+    ]
+  },
+  {
+    id: 'ariahide-nested',
+    api: 'ariaHide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Nested hide and unhide leaves the tab order intact',
+    issue: 12,
+    do: 'Tab through and note the order. Click “Hide inner”, “Hide outer”, “Unhide outer”, “Unhide inner”, then Tab through again.',
+    hear: 'Both controls reachable again, in the original order.',
+    not: 'The inner link permanently skipped. Each call now sets or clears inert on its own element, so nesting should be unremarkable — this sequence used to corrupt the tabindex backup.',
+    sandbox: '<div data-inner style="padding:.4rem;border:1px dotted var(--line)"><a href="#n">Inner link</a></div><button type="button">Outer button</button>',
+    actions: [
+      { label: 'Hide inner', run: (sb) => ariaHide(sb.querySelector('[data-inner]')) },
+      { label: 'Hide outer', run: (sb) => ariaHide(sb) },
+      { label: 'Unhide outer', secondary: true, run: (sb) => ariaUnhide(sb) },
+      { label: 'Unhide inner', secondary: true, run: (sb) => ariaUnhide(sb.querySelector('[data-inner]')) }
+    ]
+  },
+  {
+    id: 'ariahide-async',
+    api: 'ariaHide',
+    group: 'ariaHide(parent?) and ariaUnhide(parent?)',
+    title: 'Content added after hiding is covered too',
+    issue: 16,
+    do: 'Click “Hide”, then “Add a button”, then Tab through the region and browse it with the virtual cursor.',
+    hear: 'Nothing from the region, including the button added after it was hidden.',
+    not: 'The new button being reachable. That was the pre-2.0 behaviour: ariaHide() snapshotted the focusable elements once, so anything rendered afterwards stayed in the tab order. The browser enforces inert continuously, so this should now pass.',
+    note: 'This case was written as an expected failure to make the 2.0 migration measurable. It should now pass with no change to the test itself.',
+    sandbox: '<p>Region content.</p><button type="button">Original button</button> <span data-slot></span>',
+    actions: [
+      { label: 'Hide', run: (sb) => ariaHide(sb) },
+      { label: 'Add a button', run: (sb) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = 'Added after hiding';
+          sb.querySelector('[data-slot]').append(' ', b);
+      }},
+      { label: 'Unhide', secondary: true, run: (sb) => ariaUnhide(sb) }
+    ]
+  },
+
   {
     id: 'watch-prm',
     api: 'watchReducedMotion',
     group: 'watchReducedMotion(options?)',
     title: 'Watches the preference, and stops cleanly',
     issue: 19,
-    do: 'Click “Start watching”. Change the OS reduced-motion setting and watch the readout. Then click “Stop” and change the setting again.',
-    hear: 'Nothing — this is a visual check. While watching, the class tracks the OS setting. After “Stop”, the class is removed and no longer responds.',
-    not: 'The class lingering after “Stop”, or still updating. Either means the teardown did not release the listener.',
+    do: 'Click “Start watching”. Change the OS reduced-motion setting and watch the box below. Then click “Stop” and change the setting again.',
+    hear: 'Nothing — this is a visual check. While watching, the box stops animating and turns green when reduced motion is on, and resumes when it is off. After “Stop” the box returns to animating and no longer responds to the setting.',
+    not: 'The box still responding after “Stop”, or staying green. Either means the teardown did not release the listener or remove the class.',
     note: 'The older prefersReducedMotion() registers a listener that can never be removed. This is the version you can tear down, which is what makes it usable in a single-page app or a test.',
-    sandbox: '<p><strong>Target has class:</strong> <span data-cls>—</span></p><p><strong>Watching:</strong> <span data-state>no</span></p><div data-box style="padding:.4rem;border:1px dotted var(--line)">Watched element</div>',
+    sandbox: '<p><strong>Target has class:</strong> <span data-cls>—</span></p><p><strong>Watching:</strong> <span data-state>no</span></p><div data-box class="rm-target">Watched element — this box changes colour and stops moving when the class is applied</div>',
     actions: [
       { label: 'Start watching', run: (sb) => {
           const box = sb.querySelector('[data-box]');
@@ -420,14 +445,24 @@ const root = document.getElementById('cases');
 // rather than letting someone record a meaningless result.
 const announcerExisted = !!document.getElementById('announce-this');
 
+// Numbered by position rather than hand-assigned, so adding a case never means
+// renumbering the ones after it. Each API surface gets a major number and its
+// cases count up from .1.
 let currentGroup = null;
+let groupNumber = 0;
+let caseNumber = 0;
 for (const c of CASES) {
   if (c.group !== currentGroup) {
     currentGroup = c.group;
+    groupNumber += 1;
+    caseNumber = 0;
     const h2 = document.createElement('h2');
-    h2.innerHTML = `<span class="sig">${escapeHtml(currentGroup)}</span>`;
+    h2.innerHTML =
+      `<span class="group-num">${groupNumber}.</span> <span class="sig">${escapeHtml(currentGroup)}</span>`;
     root.append(h2);
   }
+  caseNumber += 1;
+  c.number = `${groupNumber}.${caseNumber}`;
   root.append(renderCase(c));
 }
 
@@ -441,7 +476,7 @@ function renderCase(c) {
 
   const issue = c.issue ? ` <a href="https://github.com/patrickfox/a11ykit/issues/${c.issue}">#${c.issue}</a>` : '';
   el.innerHTML = `
-    <h3>${escapeHtml(c.title)}${issue}</h3>
+    <h3><span class="case-num">${c.number}</span>${escapeHtml(c.title)}${issue}</h3>
     <dl class="spec">
       <dt class="do">Do</dt><dd>${escapeHtml(c.do)}</dd>
       <dt class="hear">Expect</dt><dd>${c.hear}</dd>
@@ -460,7 +495,7 @@ function renderCase(c) {
         <label><input type="radio" name="v-${c.id}" value="fail"> Fail</label>
         <label><input type="radio" name="v-${c.id}" value="na"> N/A</label>
         <input type="text" name="n-${c.id}" placeholder="Notes — what you actually heard"
-               aria-label="Notes for: ${escapeHtml(c.title)}">
+               aria-label="Notes for ${c.number}: ${escapeHtml(c.title)}">
       </div>
     </fieldset>`;
 
@@ -594,22 +629,22 @@ function buildReport() {
     `| A11yKit | ${lib} |`,
     `| Date | ${new Date().toISOString().slice(0, 10)} |`,
     ``,
-    `| Case | Result | Notes |`,
-    `|---|---|---|`
+    `| # | Case | Result | Notes |`,
+    `|---|---|---|---|`
   ];
   for (const c of CASES) {
     const r = results[c.id];
     const verdict = r?.verdict ? sym[r.verdict] : '⬜ not run';
     const notes = (r?.notes || '').replace(/\|/g, '\\|') || '—';
     const ref = c.issue ? ` (#${c.issue})` : '';
-    lines.push(`| ${c.title}${ref} | ${verdict} | ${notes} |`);
+    lines.push(`| ${c.number} | ${c.title}${ref} | ${verdict} | ${notes} |`);
   }
 
   const fails = CASES.filter((c) => results[c.id]?.verdict === 'fail');
   if (fails.length) {
     lines.push(``, `### Failures`, ``);
     for (const c of fails) {
-      lines.push(`- **${c.title}**${c.issue ? ` (#${c.issue})` : ''}`);
+      lines.push(`- **${c.number} — ${c.title}**${c.issue ? ` (#${c.issue})` : ''}`);
       lines.push(`  - Expected: ${stripTags(c.hear)}`);
       if (results[c.id].notes) lines.push(`  - Observed: ${results[c.id].notes}`);
     }

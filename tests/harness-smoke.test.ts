@@ -57,6 +57,23 @@ describeIfBuilt('manual harness runs against the built bundle', () => {
     });
     win = dom.window as unknown as Window & typeof globalThis;
     doc = dom.window.document;
+
+    // jsdom has no inert, so ariaHide() would correctly refuse to do anything.
+    // Reflect the attribute the way a supporting browser does, so the harness
+    // is exercised on the path real users are on.
+    Object.defineProperty(win.HTMLElement.prototype, 'inert', {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.hasAttribute('inert');
+      },
+      set(this: HTMLElement, value: boolean) {
+        if (value) {
+          this.setAttribute('inert', '');
+        } else {
+          this.removeAttribute('inert');
+        }
+      }
+    });
   });
 
   const button = (caseId: string, label: string): HTMLButtonElement => {
@@ -129,12 +146,14 @@ describeIfBuilt('manual harness runs against the built bundle', () => {
     const link = sandbox.querySelector('a')!;
 
     button('ariahide-basic', 'Hide').click();
-    expect(sandbox.getAttribute('aria-hidden')).toBe('true');
-    expect(link.getAttribute('tabindex')).toBe('-1');
+    expect(sandbox.hasAttribute('inert')).toBe(true);
+    // 2.0 writes nothing to descendants — the browser enforces inert.
+    expect(link.hasAttribute('tabindex')).toBe(false);
+    expect(sandbox.hasAttribute('aria-hidden')).toBe(false);
 
     button('ariahide-basic', 'Unhide').click();
-    expect(sandbox.hasAttribute('aria-hidden')).toBe(false);
-    expect(link.hasAttribute('tabindex')).toBe(false);
+    expect(sandbox.hasAttribute('inert')).toBe(false);
+    expect(sandbox.hasAttribute('data-a11ykit-inert')).toBe(false);
   });
 
   test('recording a verdict updates state and reaches the report', () => {

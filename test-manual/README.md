@@ -82,6 +82,11 @@ and it would not catch a packaging regression. As a side effect, this page is a
 live check on the no-build CDN path documented in the README: if the ESM bundle
 ever grows a bare specifier, the page stops loading.
 
+Cases are numbered by API surface — `1.x` for `announce()`, `2.x` for
+`access()`, and so on — so a result can be referred to by number rather than by
+quoting its title. The numbers come from position, not from anything written
+down, so inserting a case renumbers the ones after it rather than leaving a gap.
+
 Each case states three things:
 
 - **Do** — the action to take
@@ -132,6 +137,13 @@ or assertive → polite. Two explanations fit:
 **Part 1** runs four sequences against the unchanged implementation.
 polite → polite is the deciding one.
 
+**Part 3** tackles a separate failure: announcing the same string twice in a row
+is silent on Chromium while working on WebKit and Gecko. It is not a missing DOM
+change — the region empties itself after 500ms, so the second write genuinely
+changes the content from empty to text. Something above the DOM suppresses text
+it just spoke. Each variant pre-registers the region so registration is not a
+factor, then asks only whether a second, identical announcement is heard.
+
 **Part 2** tests candidate fixes. The last variant, *Proposed fix — two calls in
 one task*, is the actual shape of the intended change rather than an isolated
 timing probe: lazy creation, a macrotask before the first write, and a one-slot
@@ -169,7 +181,8 @@ first write by 100ms; every later call is synchronous.
 | Shipped fix, two calls in one task | — | — | spoke, correct message |
 
 Tested with VoiceOver on macOS 26 (Safari 26, Chrome, Brave) and NVDA 2026.2
-with Chrome on Windows 11.
+with Chrome on Windows 11. The shipped 100ms fix is additionally confirmed on
+JAWS, which passes every case in the main harness.
 
 WebKit is the outlier. A macrotask is sufficient everywhere else, so shipping
 `setTimeout(0)` would have looked correct on two of the three pairings and been
@@ -189,13 +202,34 @@ missed announcement during a manual run than a real platform difference. It does
 not affect the shipped fix, which creates the region lazily. Worth a re-run if
 anyone revisits eager creation.
 
+## 2.0 verification run
+
+VoiceOver with Brave 1.94 on macOS, against the 2.0.0 build. Every case in the
+main harness passes, re-confirmed after `ariaHide()` was simplified to require
+`inert` outright.
+
+The case worth calling out is *Content added after hiding is covered too*. It
+was written as a deliberate expected failure to make the `inert` migration
+measurable, and passes on 2.0 with no change to what it asks the tester to do —
+so `inert` is confirmed working with a real screen reader, which is the one
+thing jsdom cannot establish.
+
+*The same message announced twice is spoken twice* failed on this run and was
+fixed: a synchronous clear-and-rewrite of the same string is not a mutation, so
+nothing was announced. Notably JAWS passed that case while VoiceOver failed it.
+
+## Browsers without inert
+
+2.0 requires `inert`. On an older browser `ariaHide()` warns once and does
+nothing, so cases 3.1 to 3.4 will fail there by design — that is the library
+telling you to use 1.1.x rather than silently leaving content reachable.
+
 ## Expected failures
 
-One case is expected to fail today: *content added after hiding stays in the tab
-order*. `ariaHide()` takes a one-time snapshot, so anything rendered into the
-subtree afterwards is still tabbable. This is a documented limitation, not a
-regression. The case exists so the 2.0.0 `inert` migration is measurable — it
-should flip to pass with no other change.
+None. The *content added after hiding* case was the standing exception through
+1.x, where `ariaHide()` took a one-time snapshot and anything rendered into the
+subtree afterwards stayed tabbable. 2.0 builds on `inert`, which the browser
+enforces continuously, and the case now passes.
 
 ## Coverage worth recording
 
@@ -214,8 +248,11 @@ what most of these cases exercise.
 
 ## Adding a case
 
-Add an entry to the `CASES` array in `index.html`. Every case needs an `api`
-field naming the export it exercises. `tests/harness-sync.test.ts` fails the
+Add an entry to the `CASES` array in `index.html`, **next to the other cases for
+the same API**. Numbering follows array order, so a case placed away from its
+group starts a second group with the same heading — which is how the duplicate
+`access` section was spotted. Every case needs an `api` field naming the export
+it exercises. `tests/harness-sync.test.ts` fails the
 build if a public export has no case, so a new function in `src/index.ts`
 cannot ship without one — that guard is what keeps this page from going stale.
 
